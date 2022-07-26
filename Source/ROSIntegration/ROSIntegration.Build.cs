@@ -56,7 +56,11 @@ public class ROSIntegration : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"Sockets",
-				"Networking"
+				"Networking",
+				"InputCore",
+				"UMG",
+				"WebSockets",
+
 				// ... add private dependencies that you statically link with here ...
 			}
 		);

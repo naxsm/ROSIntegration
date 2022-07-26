@@ -19,6 +19,12 @@ public:
 };
 
 
+UENUM(BlueprintType)
+enum class EROSConnType : uint8 {
+	TCPConn UMETA(DisplayName = "TCP"),
+	WebSocketConn UMETA(DisplayName = "WebSocket"),
+};
+
 
 // Wrapper of the private implementation of ROSIntegrationCore inside UObject 
 UCLASS()
@@ -37,7 +43,7 @@ public:
 	UImpl();
 	~UImpl();
 
-	void Init();
+	void Init(EROSConnType connType = EROSConnType::TCPConn);
 
 	void BeginDestroy() override;
 
@@ -64,7 +70,7 @@ public:
 
 	~UROSIntegrationCore();
 
-	bool Init(FString ROSBridgeHost, int32 ROSBridgePort);
+	bool Init(FString ROSBridgeHost, int32 ROSBridgePort, EROSConnType connType = EROSConnType::TCPConn);
 
 	bool IsHealthy() const;
 

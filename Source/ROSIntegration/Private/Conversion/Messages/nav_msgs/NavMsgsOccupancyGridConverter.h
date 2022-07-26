@@ -24,8 +24,9 @@ public:
 
 		if (!UStdMsgsHeaderConverter::_bson_extract_child_header(b, key + ".header", &msg->header)) return false;
 		if (!UNavMsgsMapMetaDataConverter::_bson_extract_child_map_meta_data(b, key + ".info", &msg->info)) return false;
-		msg->data = GetInt32TArrayFromBSON(key + ".data", b, KeyFound); if (!KeyFound) return false;
-		
+		//msg->data = GetInt32TArrayFromBSON(key + ".data", b, KeyFound); if (!KeyFound) return false;
+		msg->str_data = GetFStringFromBSON(key + ".data", b, KeyFound); if (!KeyFound) return false;
+
 		return true;
 	}
 

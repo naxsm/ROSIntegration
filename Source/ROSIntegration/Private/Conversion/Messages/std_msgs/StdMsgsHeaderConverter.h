@@ -21,7 +21,9 @@ public:
 		bool KeyFound = false;
 		
 		// TODO Check if rosbridge sends UINT64 or INT32 (there is no uint32 in bson)
-		msg->seq = GetInt32FromBSON(key + ".seq", b, KeyFound, LogOnErrors); if (!KeyFound) return false;
+		//		msg->seq = GetInt32FromBSON(key + ".seq", b, KeyFound, LogOnErrors); if (!KeyFound) return false;
+		// ignore seq if not present
+		msg->seq = GetInt32FromBSON(key + ".seq", b, KeyFound, false);
 		// int32 Sec = GetInt32FromBSON(key + ".stamp.secs", b, KeyFound, LogOnErrors);  if (!KeyFound) return false;
 		// int32 NSec = GetInt32FromBSON(key + ".stamp.nsecs", b, KeyFound, LogOnErrors); if (!KeyFound) return false;
 		// msg->time = FROSTime(Sec, NSec);

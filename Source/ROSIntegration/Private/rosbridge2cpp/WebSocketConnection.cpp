@@ -1,58 +1,57 @@
-#include "TCPConnection.h"
+#include "WebSocketConnection.h"
 
 #include "ROSIntegrationCore.h"
 
 #include <iomanip>
-
-#include <Interfaces/IPv4/IPv4Address.h>
-#if ENGINE_MINOR_VERSION < 23
-	#include <IPAddress.h>
-#endif
 #include <Serialization/ArrayReader.h>
-#include <SocketSubsystem.h>
 
-bool TCPConnection::Init(std::string ip_addr, int port)
+#include "WebSocketsModule.h"
+#include "Containers/UnrealString.h"
+
+
+bool WebSocketConnection::Init(std::string ip_addr, int port)
 {
-	FString address = FString(ip_addr.c_str());
-	int32 remote_port = port;
-	FIPv4Address ip;
-	FIPv4Address::Parse(address, ip);
+	UE_LOG(LogROS, Warning, TEXT("Using WebSocketConnection"));
+	_sock = FWebSocketsModule::Get().CreateWebSocket(TEXT("ws://127.0.0.1:9090/rosbridge"));
 
-	auto addr = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
-	bool ipValid = false;
-	addr->SetIp(*address, ipValid);
-	addr->SetPort(remote_port);
 
-	if (!ipValid)
-	{
-		std::cout << "Given IP address is invalid: " << *address << std::endl;
-		return false;
-	}
+	_sock->OnMessage().AddLambda([&](const FString& Message) -> void {
 
-	_sock = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateSocket(NAME_Stream, TEXT("Rosbridge TCP client"), false);
+		if (bson_only_mode_)
+		{
+			bson_t b;
+			if (!bson_init_static(&b, reinterpret_cast<const uint8*>(*Message), Message.Len()))
+			{
+				UE_LOG(LogROS, Error, TEXT("Error on BSON parse - Ignoring message"));
+				return;
+			}
+			if (incoming_message_callback_bson_)
+			{
+				incoming_message_callback_bson_(b);
+			}
+		}
+		else
+		{
+			json j;
+			j.Parse(TCHAR_TO_UTF8(*Message));
 
-	/*const int32 ReceiveBufferSize = 4000000;
-	int32 ReceiveBufferSizeSet = 4000000;
-	if (!_sock->SetReceiveBufferSize(4000000, ReceiveBufferSizeSet) ||
-		ReceiveBufferSizeSet < ReceiveBufferSize)
-	{
-		std::cout << "Unable to set requested receiver buffer size" << std::endl;
-	}*/
+			if (_incoming_message_callback)
+				_incoming_message_callback(j);
+		}
 
-	if (!_sock->Connect(*addr))
-		return false;
+		// This code will run when we receive a string message from the server.
+		});
 
+	_sock->Connect();
+	
 	// Setting up the receiver thread
 	UE_LOG(LogROS, Display, TEXT("Setting up receiver thread ..."));
 
-	run_receiver_thread = true;
-	receiverThread = std::thread(&TCPConnection::ReceiverThreadFunction, this);
-	receiverThreadSetUp = true;
 
 	return true;
 }
 
-bool TCPConnection::SendMessage(std::string data)
+bool WebSocketConnection::SendMessage(std::string data)
 {
 	// std::string msg = "{\"args\":{\"a\":1,\"b\":2},\"id\":\"call_service:/add_two_ints:23\",\"op\":\"call_service\",\"service\":\"/add_two_ints\"}";
 	const uint8 *byte_msg = reinterpret_cast<const uint8*>(data.c_str());
@@ -60,55 +59,46 @@ bool TCPConnection::SendMessage(std::string data)
 	// TODO check proper casting
 
 	// TODO check errors on send
-	_sock->Send(byte_msg, data.length(), bytes_sent);
+	_sock->Send(byte_msg, data.length(), true);
 	UE_LOG(LogROS, VeryVerbose, TEXT("Send data: %s"), *FString(UTF8_TO_TCHAR(data.c_str())));
+	UE_LOG(LogROS, Warning, TEXT("Send data: %s"), *FString(UTF8_TO_TCHAR(data.c_str())));
 
 	return true;
 }
 
-bool TCPConnection::SendMessage(const uint8_t *data, unsigned int length)
+bool WebSocketConnection::SendMessage(const uint8_t *data, unsigned int length)
 {
-	// Simple checksum
-	//uint16_t checksum = Fletcher16(data, length);
+	std::string s(reinterpret_cast<const char*>(data), length);
 
-	int32 bytes_sent = 0;
-	unsigned int total_bytes_to_send = length;
-	int32 num_tries = 0;
-	while (total_bytes_to_send > 0 && num_tries < 3)
-	{
-		bool SendResult = _sock->Send(data, total_bytes_to_send, bytes_sent);
+	auto zx = BytesToString(data, length);
 
-		if (SendResult)
-		{
-			data += bytes_sent;
-		}
-		else
-		{
-			++num_tries;
-		}
+	// FTCHARToUTF8 zz(*zx, zx.Len());
+	FTCHARToUTF8 zz(reinterpret_cast<const TCHAR*>(data), length);
+	FString toSend(TCHAR_TO_UTF8(s.c_str()));
+	_sock->Send(data, length, false);
+	// _sock->Send(*toSend, toSend.Len(), true);
+	//_sock->Send(*zx, zx.Len(), true);
+	// _sock->Send(zz.Get(), zz.Length(), true);
 
-		total_bytes_to_send -= bytes_sent;
-	}
 
-	return total_bytes_to_send == 0;
+	uint8_t* zxc = new uint8_t[length+1];
+	zxc[0] = '\xc2';
+	for (unsigned int i = 0; i < length; ++i)
+		zxc[i + 1] = data[i];
+	// _sock->Send(data, length, true);
+	//_sock->Send(zxc, length+1, true);
+	delete[] zxc;
+	UE_LOG(LogROS, Warning, TEXT("Send data[2.][%d]: %s"), length, data);
+	UE_LOG(LogROS, Warning, TEXT("Send data[2.][%d]: %s"), length+1, zxc);
+
+	// UE_LOG(LogROS, Warning, TEXT("Send data[2a][%d]: %s"), zx.Len(), *zx);
+	// UE_LOG(LogROS, Warning, TEXT("Send data[2a][%d]: %s"), zz.Length(), zz.Get());
+	// UE_LOG(LogROS, Warning, TEXT("Send data[x2a][%d]: %s"), FString(UTF8_TO_TCHAR(*toSend)).Len(), *FString(UTF8_TO_TCHAR(*toSend)));
+
+	return true;
 }
-
-uint16_t TCPConnection::Fletcher16( const uint8_t *data, int count )
-{
-	uint16_t sum1 = 0;
-	uint16_t sum2 = 0;
-	int index;
-
-	for (index = 0; index < count; ++index)
-	{
-		sum1 = (sum1 + data[index]) % 255;
-		sum2 = (sum2 + sum1) % 255;
-	}
-
-	return (sum2 << 8) | sum1;
-}
-
-int TCPConnection::ReceiverThreadFunction()
+/*
+int WebSocketConnection::ReceiverThreadFunction()
 {
 	TArray<uint8> binary_buffer;
 	uint32_t buffer_size = 10 * 1024 * 1024;
@@ -119,7 +109,7 @@ int TCPConnection::ReceiverThreadFunction()
 	int return_value = 0;
 
 	while (run_receiver_thread) {
-		UE_LOG(LogTemp, Warning, TEXT("SOCK IS OK? %d -**-*-*--*-**-*--*-**-*--**-"), static_cast<bool>(_sock));
+
 		ESocketConnectionState ConnectionState = _sock->GetConnectionState();
 		if (ConnectionState != ESocketConnectionState::SCS_Connected) {
 			if (ConnectionState == SCS_NotConnected) {
@@ -233,33 +223,33 @@ int TCPConnection::ReceiverThreadFunction()
 
 	return return_value;
 }
+*/
 
-
-void TCPConnection::RegisterIncomingMessageCallback(std::function<void(json&)> fun)
+void WebSocketConnection::RegisterIncomingMessageCallback(std::function<void(json&)> fun)
 {
 	_incoming_message_callback = fun;
 	_callback_function_defined = true;
 }
 
-void TCPConnection::RegisterIncomingMessageCallback(std::function<void(bson_t&)> fun)
+void WebSocketConnection::RegisterIncomingMessageCallback(std::function<void(bson_t&)> fun)
 {
 	incoming_message_callback_bson_ = fun;
 	_callback_function_defined = true;
 }
 
-void TCPConnection::RegisterErrorCallback(std::function<void(rosbridge2cpp::TransportError)> fun)
+void WebSocketConnection::RegisterErrorCallback(std::function<void(rosbridge2cpp::TransportError)> fun)
 {
 	_error_callback = fun;
 }
 
-void TCPConnection::ReportError(rosbridge2cpp::TransportError err)
+void WebSocketConnection::ReportError(rosbridge2cpp::TransportError err)
 {
 	if (_error_callback)
 		_error_callback(err);
 }
 
 
-void TCPConnection::SetTransportMode(rosbridge2cpp::ITransportLayer::TransportMode mode)
+void WebSocketConnection::SetTransportMode(rosbridge2cpp::ITransportLayer::TransportMode mode)
 {
 	switch (mode) {
 	case rosbridge2cpp::ITransportLayer::JSON:
@@ -273,7 +263,7 @@ void TCPConnection::SetTransportMode(rosbridge2cpp::ITransportLayer::TransportMo
 	}
 }
 
-bool TCPConnection::IsHealthy() const
+bool WebSocketConnection::IsHealthy() const
 {
 	return run_receiver_thread;
 }

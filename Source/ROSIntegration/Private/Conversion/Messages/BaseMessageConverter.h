@@ -49,7 +49,7 @@ public:
 
 		std::string value = rosbridge2cpp::Helper::get_utf8_by_key(TCHAR_TO_UTF8(*Key), *msg, KeyFound);
 		if (!KeyFound && LogOnErrors) {
-			UE_LOG(LogROS, Error, TEXT("Key %s not present in data"), *Key);
+			UE_LOG(LogROS, Error, TEXT("in GetFStringFromBSON: Key %s not present in data"), *Key);
 		}
 		return UTF8_TO_TCHAR(value.c_str());
 	}
@@ -208,8 +208,16 @@ public:
 	static bool _bson_extract_child_ros_time(bson_t *b, FString key, FROSTime *time, bool LogOnErrors = true)
 	{
 		bool KeyFound = false;
-		time->_Sec = GetInt32FromBSON(key + ".secs", b, KeyFound, LogOnErrors); if (!KeyFound) return false;
-		time->_NSec = GetInt32FromBSON(key + ".nsecs", b, KeyFound, LogOnErrors); if (!KeyFound) return false;
+		time->_Sec = GetInt32FromBSON(key + ".secs", b, KeyFound, false); 
+		if (!KeyFound) // ROS2 ?
+		{
+			time->_Sec = GetInt32FromBSON(key + ".sec", b, KeyFound, LogOnErrors); if (!KeyFound) return false;
+		}
+		time->_NSec = GetInt32FromBSON(key + ".nsecs", b, KeyFound, false);
+		if (!KeyFound) // ROS2 ?
+		{
+			time->_NSec = GetInt32FromBSON(key + ".nanosec", b, KeyFound, LogOnErrors); if (!KeyFound) return false;
+		}
 		return true;
 	}
 

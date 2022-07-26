@@ -39,8 +39,11 @@ public:
 		msg->is_dense = GetBoolFromBSON(key + ".is_dense", b, KeyFound); if (!KeyFound) return false;
 		msg->point_step = GetInt32FromBSON(key + ".point_step", b, KeyFound); if (!KeyFound) return false;
 		msg->row_step = GetInt32FromBSON(key + ".row_step", b, KeyFound); if (!KeyFound) return false;
-		msg->data_ptr = GetBinaryFromBSON(key + ".data", b, KeyFound); if (!KeyFound) return false;
-
+		msg->data_ptr = GetBinaryFromBSON(key + ".data", b, KeyFound); if (!KeyFound) //return false;
+		// auto zzz = GetFStringFromBSON(key + ".data", b, KeyFound); if (!KeyFound) return false;
+		msg->str_data = GetFStringFromBSON(key + ".data", b, KeyFound);// .GetCharArray();
+		//msg->str_data =  reinterpret_cast<uint8*>(zz2.GetData());
+		//UE_LOG(LogTemp, Warning, TEXT("arr len = %d"), zz2.Num());
 		return true;
 	}
 

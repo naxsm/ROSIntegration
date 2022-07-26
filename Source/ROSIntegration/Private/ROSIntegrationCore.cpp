@@ -1,8 +1,10 @@
 #include "ROSIntegrationCore.h"
-#include "ROSIntegrationGameInstance.h"
-#include "rosbridge2cpp/TCPConnection.h"
-#include "rosbridge2cpp/ros_bridge.h"
-#include "rosbridge2cpp/ros_topic.h"
+//#include "ROSIntegrationGameInstance.h"
+//#include "client/socket_tcp_connection.h"
+#include "TCPConnection.h"
+#include "WebSocketConnection.h"
+#include "ros_bridge.h"
+#include "ros_topic.h"
 
 #include "SpawnManager.h"
 #include "SpawnObjectMessage.h"
@@ -26,8 +28,11 @@ class UImpl::Impl
 public:
 	bool _bson_test_mode;
 
-	TCPConnection _Connection;
-	rosbridge2cpp::ROSBridge _Ros{ _Connection };
+	//TCPConnection _Connection;
+	rosbridge2cpp::ITransportLayer* _Connection = nullptr;
+
+	//rosbridge2cpp::ROSBridge _Ros{ _Connection };
+	rosbridge2cpp::ROSBridge* _Ros = nullptr;
 
 
 	UWorld* _World = nullptr;
@@ -248,9 +253,14 @@ public:
 		UE_LOG(LogROS, Warning, TEXT("RECEIVED SPAWN MESSAGE --- Not implemented yet. Use the SpawnArray topic instead"));
 	}
 
-	Impl()
+	Impl(EROSConnType connType = EROSConnType::TCPConn)
 	{
-
+		if (connType == EROSConnType::TCPConn)
+			_Connection = new TCPConnection();
+		else if (connType == EROSConnType::WebSocketConn)
+			_Connection = new WebSocketConnection();
+		if (_Connection)
+			_Ros = new rosbridge2cpp::ROSBridge(*_Connection);
 	}
 
 	~Impl()
@@ -258,11 +268,16 @@ public:
 		UE_LOG(LogROS, Display, TEXT("UROSIntegrationCore ~Impl() "));
 		//_World = nullptr;
 		_SpawnManager = nullptr;
+		if (_Ros)
+			delete _Ros;
+		if (_Connection)
+			delete _Connection;
 	}
 
 	bool IsHealthy() const
 	{
-		return _Connection.IsHealthy() && _Ros.IsHealthy();
+		//return _Connection->IsHealthy() && _Ros->IsHealthy();
+		return _Ros && _Ros->IsHealthy();
 	}
 
 	void SetWorld(UWorld* World)
@@ -280,10 +295,10 @@ public:
 		_bson_test_mode = bson_test_mode;
 
 		if (bson_test_mode) {
-			_Ros.enable_bson_mode();
+			_Ros->enable_bson_mode();
 		}
 
-		bool ConnectionSuccessful = _Ros.Init(TCHAR_TO_UTF8(*ROSBridgeHost), ROSBridgePort);
+		bool ConnectionSuccessful = _Ros->Init(TCHAR_TO_UTF8(*ROSBridgeHost), ROSBridgePort);
 		if (!ConnectionSuccessful) {
 			return false;
 		}
@@ -298,11 +313,11 @@ public:
 	{
 		// Listen to the object spawning thread
 		_SpawnMessageListener = std::unique_ptr<rosbridge2cpp::ROSTopic>(
-			new rosbridge2cpp::ROSTopic(_Ros, "/unreal_ros/spawn_objects", "visualization_msgs/Marker"));
+			new rosbridge2cpp::ROSTopic(*_Ros, "/unreal_ros/spawn_objects", "visualization_msgs/Marker"));
 		_SpawnMessageListener->Subscribe(std::bind(&UImpl::Impl::SpawnMessageCallback, this, std::placeholders::_1));
 
 		_SpawnArrayMessageListener = std::unique_ptr<rosbridge2cpp::ROSTopic>(
-			new rosbridge2cpp::ROSTopic(_Ros, "/unreal_ros/spawn_objects_array", "visualization_msgs/MarkerArray"));
+			new rosbridge2cpp::ROSTopic(*_Ros, "/unreal_ros/spawn_objects_array", "visualization_msgs/MarkerArray"));
 		_SpawnArrayMessageListener->Subscribe(
 			std::bind(&UImpl::Impl::SpawnArrayMessageCallback, this, std::placeholders::_1));
 
@@ -333,10 +348,10 @@ UImpl::~UImpl()
 	UE_LOG(LogROS, Display, TEXT("UROSIntegrationCore ~UImpl() "));
 }
 
-void UImpl::Init()
+void UImpl::Init(EROSConnType connType)
 {
 	UE_LOG(LogROS, Display, TEXT("UImpl::Init() "));
-	impl_ = TSharedPtr<Impl>(new UImpl::Impl());
+	impl_ = TSharedPtr<Impl>(new UImpl::Impl(connType));
 
 }
 
@@ -369,7 +384,7 @@ UROSIntegrationCore::~UROSIntegrationCore()
 	UE_LOG(LogROS, Display, TEXT("UROSIntegrationCore ~UROSIntegrationCore() "));
 }
 
-bool UROSIntegrationCore::Init(FString ROSBridgeHost, int32 ROSBridgePort) {
+bool UROSIntegrationCore::Init(FString ROSBridgeHost, int32 ROSBridgePort, EROSConnType connType) {
 	UE_LOG(LogROS, Verbose, TEXT("CALLING INIT ON RIC IMPL()!"));
 
 	if(!_SpawnManager)	_SpawnManager = NewObject<USpawnManager>(USpawnManager::StaticClass()); // moved here from UImpl::Init()
@@ -378,7 +393,7 @@ bool UROSIntegrationCore::Init(FString ROSBridgeHost, int32 ROSBridgePort) {
 	if (!_Implementation)
 	{
 		_Implementation = NewObject<UImpl>(UImpl::StaticClass());
-		_Implementation->Init();
+		_Implementation->Init(connType);
 		_Implementation->SetImplSpawnManager(_SpawnManager);
 	}
 	return _Implementation->Get()->Init(ROSBridgeHost, ROSBridgePort, _bson_test_mode);
