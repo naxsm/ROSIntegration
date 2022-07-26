@@ -22,6 +22,7 @@ namespace ROSMessages {
 			// int8[] data
 			// Note: BSON will coerce the int32 to int8. int8 not implemented in BSON.
 			TArray<int32> data;
+			const int8* data_ptr;
 			FString str_data;
 		};
 	}

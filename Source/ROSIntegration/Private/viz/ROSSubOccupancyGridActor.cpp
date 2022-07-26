@@ -30,17 +30,21 @@ void AROSSubOccupancyGridActor::DisplayMessage(const UWorld* world, TSharedPtr<F
 	uint32 height = info.height;
 	//auto data = msg->data_ptr;
 	//auto data = msg->my_ptr;
-	// auto data = msg->data;
-
+	//auto data = msg->data;
+	/*
 	TArray<uint8> decoded;
 	FBase64::Decode(msg->str_data, decoded);
 	auto data = decoded;
+	*/
 	// const float* points = reinterpret_cast<const float*>(data_arr.GetData());
+	//const int8* data = reinterpret_cast<const int8*>(msg->data_ptr);
 
-	UE_LOG(LogTemp, Warning, TEXT("arr len = %d / %d / [%d x %d]"), data.Num(), msg->str_data.Len(), width, height);
+	auto data = msg->data_ptr;
 
-	//if (data)
-	if (data.Num() > 0)
+	//UE_LOG(LogTemp, Warning, TEXT("arr len = %d / %d / [%d x %d]"), data.Num(), msg->str_data.Len(), width, height);
+
+	if (data)
+	//if (data.Num() > 0)
 		{
 		FTransform t = transform;
 		t.ConcatenateRotation(rotation);

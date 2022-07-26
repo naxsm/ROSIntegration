@@ -119,7 +119,7 @@ int TCPConnection::ReceiverThreadFunction()
 	int return_value = 0;
 
 	while (run_receiver_thread) {
-		UE_LOG(LogTemp, Warning, TEXT("SOCK IS OK? %d -**-*-*--*-**-*--*-**-*--**-"), static_cast<bool>(_sock));
+		//UE_LOG(LogTemp, Warning, TEXT("SOCK IS OK? %d -**-*-*--*-**-*--*-**-*--**-"), static_cast<bool>(_sock));
 		ESocketConnectionState ConnectionState = _sock->GetConnectionState();
 		if (ConnectionState != ESocketConnectionState::SCS_Connected) {
 			if (ConnectionState == SCS_NotConnected) {

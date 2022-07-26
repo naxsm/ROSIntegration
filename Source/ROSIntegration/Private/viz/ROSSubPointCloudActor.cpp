@@ -15,13 +15,15 @@ void AROSSubPointCloudActor::DisplayMessage(const UWorld* world, TSharedPtr<FROS
 	//const float* points = reinterpret_cast<const float*>(msg->my_ptr);
 
 
-	// FString decoded;
+	/*
 	TArray<uint8> decoded;
 	FBase64::Decode(msg->str_data, decoded);
 	auto data_arr = decoded;// .GetCharArray();
 	const float* points = reinterpret_cast<const float*>(data_arr.GetData());
+	*/
+	const float* points = reinterpret_cast<const float*>(msg->data_ptr);
 
-	UE_LOG(LogTemp, Warning, TEXT("arr len = %d / %d / %d"), data_arr.Num(), nPoints, msg->str_data.Len());
+	//UE_LOG(LogTemp, Warning, TEXT("arr len = %d / %d / %d"), data_arr.Num(), nPoints, msg->str_data.Len());
 
 
 	for (int i = 0; i < nPoints; ++i)

@@ -20,12 +20,15 @@ public:
 
 	static bool _bson_extract_child_occupancy_grid(bson_t *b, FString key, ROSMessages::nav_msgs::OccupancyGrid *msg, bool LogOnErrors = true)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("occ.grid"));
 		bool KeyFound = false;
 
 		if (!UStdMsgsHeaderConverter::_bson_extract_child_header(b, key + ".header", &msg->header)) return false;
 		if (!UNavMsgsMapMetaDataConverter::_bson_extract_child_map_meta_data(b, key + ".info", &msg->info)) return false;
 		//msg->data = GetInt32TArrayFromBSON(key + ".data", b, KeyFound); if (!KeyFound) return false;
-		msg->str_data = GetFStringFromBSON(key + ".data", b, KeyFound); if (!KeyFound) return false;
+		msg->data_ptr = reinterpret_cast<const int8*>(GetBinaryFromBSON(key + ".data", b, KeyFound)); if (!KeyFound) return false;
+		//msg->str_data = GetFStringFromBSON(key + ".data", b, KeyFound); if (!KeyFound) return false;
+		UE_LOG(LogTemp, Warning, TEXT("occ.grid2"));
 
 		return true;
 	}
