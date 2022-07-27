@@ -30,8 +30,15 @@ namespace ROSMessages {
 				uint32 count;
 			};
 
-			PointCloud2() {
+			PointCloud2() 
+				:data(nullptr)
+			{
 				_MessageType = "sensor_msgs/PointCloud2";
+			}
+
+			~PointCloud2() {
+				if (data)
+					delete[] data;
 			}
 
 			ROSMessages::std_msgs::Header header;
@@ -45,11 +52,7 @@ namespace ROSMessages {
 			uint32	point_step;
 			uint32	row_step;
 
-			// To avoid copy operations of the point data, hand over a pointer to the data. 
-			// Please note, that the memory this pointer points to must be valid until this message has been published.
-			// When receiving, please note that ROS sends vectors padded to 16 bytes, with 3 floats + 4 byte padding.
-			const uint8* data_ptr;
-			FString str_data;
+			uint8* data;
 
 			bool is_dense;
 		};

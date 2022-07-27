@@ -9,7 +9,7 @@
 void UROSTopicSubscriber::SubscribeCallback(TSharedPtr<FROSBaseMsg> msg)
 {
 	auto zz = reinterpret_cast<ROSMessages::nav_msgs::Path*>(msg.Get());
-	UE_LOG(LogTemp, Warning, TEXT("at [%d.%d] cb for %s [%s]"), zz->header.time._Sec, zz->header.time._NSec, *_topicName, *msg->_MessageType);
+	//UE_LOG(LogTemp, Warning, TEXT("at [%d.%d] cb for %s [%s]"), zz->header.time._Sec, zz->header.time._NSec, *_topicName, *msg->_MessageType);
 
 	_latestMsg = CopyMsg(msg);
 	_gotNewData = true;

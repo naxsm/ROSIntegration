@@ -39,9 +39,9 @@ void AROSSubOccupancyGridActor::DisplayMessage(const UWorld* world, TSharedPtr<F
 	// const float* points = reinterpret_cast<const float*>(data_arr.GetData());
 	//const int8* data = reinterpret_cast<const int8*>(msg->data_ptr);
 
-	auto data = msg->data_ptr;
+	auto data = msg->data;
 
-	//UE_LOG(LogTemp, Warning, TEXT("arr len = %d / %d / [%d x %d]"), data.Num(), msg->str_data.Len(), width, height);
+	//UE_LOG(LogTemp, Warning, TEXT("arr len = %d / %d / [%d x %d]"), width*height, data, width, height);
 
 	if (data)
 	//if (data.Num() > 0)

@@ -9,8 +9,15 @@ namespace ROSMessages {
 	namespace nav_msgs {
 		class OccupancyGrid : public FROSBaseMsg {
 		public:
-			OccupancyGrid() {
+			OccupancyGrid() 
+				:data(nullptr)
+			{
 				_MessageType = "nav_msgs/OccupancyGrid";
+			}
+
+			~OccupancyGrid() {
+				if (data)
+					delete[] data;
 			}
 
 			// Header header
@@ -19,11 +26,7 @@ namespace ROSMessages {
 			// nav_msgs/MapMetaData info
 			MapMetaData info;
 
-			// int8[] data
-			// Note: BSON will coerce the int32 to int8. int8 not implemented in BSON.
-			TArray<int32> data;
-			const int8* data_ptr;
-			FString str_data;
+			int8* data;
 		};
 	}
 }

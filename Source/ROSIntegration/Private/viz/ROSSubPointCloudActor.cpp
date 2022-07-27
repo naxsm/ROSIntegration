@@ -21,7 +21,7 @@ void AROSSubPointCloudActor::DisplayMessage(const UWorld* world, TSharedPtr<FROS
 	auto data_arr = decoded;// .GetCharArray();
 	const float* points = reinterpret_cast<const float*>(data_arr.GetData());
 	*/
-	const float* points = reinterpret_cast<const float*>(msg->data_ptr);
+	float* points = reinterpret_cast<float*>(msg->data);
 
 	//UE_LOG(LogTemp, Warning, TEXT("arr len = %d / %d / %d"), data_arr.Num(), nPoints, msg->str_data.Len());
 

@@ -39,11 +39,16 @@ public:
 		msg->is_dense = GetBoolFromBSON(key + ".is_dense", b, KeyFound); if (!KeyFound) return false;
 		msg->point_step = GetInt32FromBSON(key + ".point_step", b, KeyFound); if (!KeyFound) return false;
 		msg->row_step = GetInt32FromBSON(key + ".row_step", b, KeyFound); if (!KeyFound) return false;
-		msg->data_ptr = GetBinaryFromBSON(key + ".data", b, KeyFound); if (!KeyFound) //return false;
-		// auto zzz = GetFStringFromBSON(key + ".data", b, KeyFound); if (!KeyFound) return false;
-		msg->str_data = GetFStringFromBSON(key + ".data", b, KeyFound);// .GetCharArray();
-		//msg->str_data =  reinterpret_cast<uint8*>(zz2.GetData());
-		//UE_LOG(LogTemp, Warning, TEXT("arr len = %d"), zz2.Num());
+		auto data = GetBinaryFromBSON(key + ".data", b, KeyFound); if (!KeyFound) return false;
+		auto sz = msg->height * msg->row_step;
+		
+		if (msg->data)
+		{
+			delete[] msg->data;
+		}
+		msg->data = new uint8[sz];
+		memcpy(msg->data, data, sz);
+
 		return true;
 	}
 
@@ -77,7 +82,7 @@ public:
 		BSON_APPEND_BOOL(b, "is_bigendian", msg->is_bigendian);
 		BSON_APPEND_INT32(b, "point_step", msg->point_step);
 		BSON_APPEND_INT32(b, "row_step", msg->row_step);
-		BSON_APPEND_BINARY(b, "data", BSON_SUBTYPE_BINARY, msg->data_ptr, msg->height * msg->row_step);
+		BSON_APPEND_BINARY(b, "data", BSON_SUBTYPE_BINARY, msg->data, msg->height * msg->row_step);
 		BSON_APPEND_BOOL(b, "is_dense", msg->is_dense);
 	}
 };

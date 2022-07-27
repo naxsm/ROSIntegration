@@ -20,15 +20,19 @@ public:
 
 	static bool _bson_extract_child_occupancy_grid(bson_t *b, FString key, ROSMessages::nav_msgs::OccupancyGrid *msg, bool LogOnErrors = true)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("occ.grid"));
 		bool KeyFound = false;
 
 		if (!UStdMsgsHeaderConverter::_bson_extract_child_header(b, key + ".header", &msg->header)) return false;
 		if (!UNavMsgsMapMetaDataConverter::_bson_extract_child_map_meta_data(b, key + ".info", &msg->info)) return false;
-		//msg->data = GetInt32TArrayFromBSON(key + ".data", b, KeyFound); if (!KeyFound) return false;
-		msg->data_ptr = reinterpret_cast<const int8*>(GetBinaryFromBSON(key + ".data", b, KeyFound)); if (!KeyFound) return false;
-		//msg->str_data = GetFStringFromBSON(key + ".data", b, KeyFound); if (!KeyFound) return false;
-		UE_LOG(LogTemp, Warning, TEXT("occ.grid2"));
+
+		auto data = GetBinaryFromBSON(key + ".data", b, KeyFound); if (!KeyFound) return false;
+		if (msg->data)
+		{
+			delete[] msg->data;
+		}
+		auto sz = msg->info.height * msg->info.width;
+		msg->data = new int8[sz];
+		memcpy(msg->data, data, sz);
 
 		return true;
 	}
@@ -45,6 +49,7 @@ public:
 	{
 		UStdMsgsHeaderConverter::_bson_append_child_header(b, "header", &msg->header);
 		UNavMsgsMapMetaDataConverter::_bson_append_child_map_meta_data(b, "info", &msg->info);
-		_bson_append_int32_tarray(b, "data", msg->data);
+		BSON_APPEND_BINARY(b, "data", BSON_SUBTYPE_BINARY, reinterpret_cast<uint8*>(msg->data), msg->info.height * msg->info.width);
+		//_bson_append_int32_tarray(b, "data", msg->data);
 	}
 };

@@ -24,9 +24,13 @@ public:
 		//		msg->seq = GetInt32FromBSON(key + ".seq", b, KeyFound, LogOnErrors); if (!KeyFound) return false;
 		// ignore seq if not present
 		msg->seq = GetInt32FromBSON(key + ".seq", b, KeyFound, false);
-		// int32 Sec = GetInt32FromBSON(key + ".stamp.secs", b, KeyFound, LogOnErrors);  if (!KeyFound) return false;
-		// int32 NSec = GetInt32FromBSON(key + ".stamp.nsecs", b, KeyFound, LogOnErrors); if (!KeyFound) return false;
-		// msg->time = FROSTime(Sec, NSec);
+		int32 Sec = GetInt32FromBSON(key + ".stamp.secs", b, KeyFound, false);  if (!KeyFound) {
+			Sec = GetInt32FromBSON(key + ".stamp.sec", b, KeyFound, LogOnErrors);  if (!KeyFound) return false; // ros2
+		}
+		int32 NSec = GetInt32FromBSON(key + ".stamp.nsecs", b, KeyFound, false); if (!KeyFound) {
+			NSec = GetInt32FromBSON(key + ".stamp.nanosec", b, KeyFound, LogOnErrors); if (!KeyFound) return false; // ros2
+		}
+		msg->time = FROSTime(Sec, NSec);
 		if (!_bson_extract_child_ros_time(b, key + ".stamp", &msg->time, LogOnErrors)) return false;
 		msg->frame_id = GetFStringFromBSON(key + ".frame_id", b, KeyFound, LogOnErrors); if (!KeyFound) return false;
 
