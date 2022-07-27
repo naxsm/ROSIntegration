@@ -17,6 +17,7 @@ bool WebSocketConnection::Init(std::string ip_addr, int port)
 
 	_sock->OnMessage().AddLambda([&](const FString& Message) -> void {
 
+		UE_LOG(LogROS, Display, TEXT("in ws->OnMessage: %s"), *Message.Left(33));
 		if (bson_only_mode_)
 		{
 			bson_t b;
@@ -60,8 +61,8 @@ bool WebSocketConnection::SendMessage(std::string data)
 
 	// TODO check errors on send
 	_sock->Send(byte_msg, data.length(), true);
-	UE_LOG(LogROS, VeryVerbose, TEXT("Send data: %s"), *FString(UTF8_TO_TCHAR(data.c_str())));
-	UE_LOG(LogROS, Warning, TEXT("Send data: %s"), *FString(UTF8_TO_TCHAR(data.c_str())));
+	UE_LOG(LogROS, VeryVerbose, TEXT("Send data: %s"), *FString(data.c_str()));
+	UE_LOG(LogROS, Warning, TEXT("Send data: %s"), *FString(data.c_str()));
 
 	return true;
 }
@@ -80,7 +81,7 @@ bool WebSocketConnection::SendMessage(const uint8_t *data, unsigned int length)
 	//_sock->Send(*zx, zx.Len(), true);
 	// _sock->Send(zz.Get(), zz.Length(), true);
 
-
+	/*
 	uint8_t* zxc = new uint8_t[length+1];
 	zxc[0] = '\xc2';
 	for (unsigned int i = 0; i < length; ++i)
@@ -88,8 +89,9 @@ bool WebSocketConnection::SendMessage(const uint8_t *data, unsigned int length)
 	// _sock->Send(data, length, true);
 	//_sock->Send(zxc, length+1, true);
 	delete[] zxc;
-	UE_LOG(LogROS, Warning, TEXT("Send data[2.][%d]: %s"), length, data);
-	UE_LOG(LogROS, Warning, TEXT("Send data[2.][%d]: %s"), length+1, zxc);
+	*/
+	UE_LOG(LogROS, Warning, TEXT("Send data[2.][%d]: %s"), length, *FString(length, s.c_str()));
+	//UE_LOG(LogROS, Warning, TEXT("Send data[2.][%d]: %s"), length+1, zxc);
 
 	// UE_LOG(LogROS, Warning, TEXT("Send data[2a][%d]: %s"), zx.Len(), *zx);
 	// UE_LOG(LogROS, Warning, TEXT("Send data[2a][%d]: %s"), zz.Length(), zz.Get());

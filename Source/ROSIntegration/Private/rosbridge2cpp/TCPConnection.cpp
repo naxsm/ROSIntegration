@@ -118,7 +118,7 @@ int TCPConnection::ReceiverThreadFunction()
 	int32_t bson_msg_length_read = 0;
 	int return_value = 0;
 
-	while (run_receiver_thread && _sock) {
+	while (run_receiver_thread) {
 		//UE_LOG(LogTemp, Warning, TEXT("SOCK IS OK? %d -**-*-*--*-**-*--*-**-*--**-"), static_cast<bool>(_sock));
 		ESocketConnectionState ConnectionState = _sock->GetConnectionState();
 		if (ConnectionState != ESocketConnectionState::SCS_Connected) {
