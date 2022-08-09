@@ -33,7 +33,7 @@ public:
 	FString topicName = "";
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Viz")
-	FTransform transform = FTransform(FRotator(), FVector(), FVector(100, -100, 100));
+	FTransform transform = FTransform(FRotator(0), FVector(0), FVector(100, -100, 100));
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Viz")
 	AActor* zActor = nullptr;
