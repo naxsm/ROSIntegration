@@ -13,7 +13,7 @@ bool WebSocketConnection::Init(std::string ip_addr, int port)
 {
 	UE_LOG(LogROS, Warning, TEXT("Using WebSocketConnection"));
 	_sock = FWebSocketsModule::Get().CreateWebSocket(TEXT("ws://127.0.0.1:9090/rosbridge"));
-
+	CleanupTempMessage();
 
 	_sock->OnRawMessage().AddLambda([&](const void* data, size_t size, size_t bytes_remaining) -> void {
 		if (0 == _message_len) // alloc. for new messsage
@@ -32,8 +32,7 @@ bool WebSocketConnection::Init(std::string ip_addr, int port)
 			if (!init)
 			{
 				UE_LOG(LogROS, Error, TEXT("Error on BSON parse - Ignoring message"));
-				delete[] _message;
-				_message_len = 0;
+				CleanupTempMessage();
 				return;
 			}
 			if (incoming_message_callback_bson_)
@@ -49,8 +48,7 @@ bool WebSocketConnection::Init(std::string ip_addr, int port)
 			if (_incoming_message_callback)
 				_incoming_message_callback(j);
 		}
-		delete[] _message;
-		_message_len = 0;
+		CleanupTempMessage();
 		});
 
 	_sock->Connect();
@@ -64,7 +62,6 @@ bool WebSocketConnection::Init(std::string ip_addr, int port)
 
 bool WebSocketConnection::SendMessage(std::string data)
 {
-	// std::string msg = "{\"args\":{\"a\":1,\"b\":2},\"id\":\"call_service:/add_two_ints:23\",\"op\":\"call_service\",\"service\":\"/add_two_ints\"}";
 	const uint8 *byte_msg = reinterpret_cast<const uint8*>(data.c_str());
 	int32 bytes_sent = 0;
 	// TODO check proper casting
@@ -82,133 +79,6 @@ bool WebSocketConnection::SendMessage(const uint8_t *data, unsigned int length)
 	_sock->Send(data, length, true);
 	return true;
 }
-/*
-int WebSocketConnection::ReceiverThreadFunction()
-{
-	TArray<uint8> binary_buffer;
-	uint32_t buffer_size = 10 * 1024 * 1024;
-	binary_buffer.Reserve(buffer_size);
-	bool bson_state_read_length = true; // indicate that the receiver shall only get 4 bytes to start with
-	int32_t bson_msg_length = 0;
-	int32_t bson_msg_length_read = 0;
-	int return_value = 0;
-
-	while (run_receiver_thread) {
-
-		ESocketConnectionState ConnectionState = _sock->GetConnectionState();
-		if (ConnectionState != ESocketConnectionState::SCS_Connected) {
-			if (ConnectionState == SCS_NotConnected) {
-				std::this_thread::sleep_for(std::chrono::milliseconds(500));
-			} else {
-				UE_LOG(LogROS, Error, TEXT("Error on connection"));
-				ReportError(rosbridge2cpp::TransportError::R2C_SOCKET_ERROR);
-				run_receiver_thread = false;
-				return_value = 2; // error while receiving from socket
-				continue;
-			}
-		}
-
-		const FTimespan OneSecond(10 * 1000 * 1000);
-		if (!_sock->Wait(ESocketWaitConditions::WaitForRead, OneSecond))
-		{
-			continue; // check if any errors occured
-		}
-
-		if (bson_only_mode_) {
-			if (bson_state_read_length) {
-				bson_msg_length_read = 0;
-				binary_buffer.SetNumUninitialized(4, false);
-				int32 bytes_read = 0;
-				if (_sock->Recv(binary_buffer.GetData(), 4, bytes_read) && bytes_read > 0) {
-					bson_msg_length_read += bytes_read;
-					if (bytes_read == 4) {
-#if PLATFORM_LITTLE_ENDIAN
-						bson_msg_length = (
-							binary_buffer.GetData()[3] << 24 |
-							binary_buffer.GetData()[2] << 16 |
-							binary_buffer.GetData()[1] << 8 |
-							binary_buffer.GetData()[0]
-						);
-#else
-						bson_msg_length = *((uint32_t*)&binary_buffer[0]);
-#endif
-						// Indicate the message retrieval mode
-						bson_state_read_length = false;
-						binary_buffer.SetNumUninitialized(bson_msg_length, false);
-					} else {
-						UE_LOG(LogROS, Error, TEXT("bytes_read is not 4 in bson_state_read_length==true. It's: %d"), bytes_read);
-					}
-				} else {
-					UE_LOG(LogROS, Error, TEXT("Failed to recv(); Closing receiver thread."));
-					run_receiver_thread = false;
-				}
-			} else {
-				// Message retrieval mode
-				int32 bytes_read = 0;
-				if (_sock->Recv(binary_buffer.GetData() + bson_msg_length_read, bson_msg_length - bson_msg_length_read, bytes_read) && bytes_read > 0) {
-
-					bson_msg_length_read += bytes_read;
-					if (bson_msg_length_read == bson_msg_length) {
-						// Full received message!
-						bson_state_read_length = true;
-						bson_t b;
-						if (!bson_init_static(&b, binary_buffer.GetData(), bson_msg_length_read)) {
-							UE_LOG(LogROS, Error, TEXT("Error on BSON parse - Ignoring message"));
-							continue;
-						}
-						if (incoming_message_callback_bson_) {
-							incoming_message_callback_bson_(b);
-						}
-					} else {
-						UE_LOG(LogROS, VeryVerbose, TEXT("Binary buffer num is: %d"), binary_buffer.Num());
-					}
-				} else {
-					UE_LOG(LogROS, Error, TEXT("Failed to recv()"));
-				}
-			}
-		}
-		else {
-			FString result;
-			uint32 count = 0;
-			while (_sock->HasPendingData(count) && count > 0) {
-				FArrayReader data;
-				data.SetNumUninitialized(count);
-
-				int32 bytes_read = 0;
-				// read pending data into the Data array reader
-				if (_sock->Recv(data.GetData(), data.Num(), bytes_read))
-				{
-					int32 dest_len = TStringConvert<ANSICHAR, TCHAR>::ConvertedLength((char*)(data.GetData()), data.Num());
-					UE_LOG(LogROS, VeryVerbose, TEXT("count is %d"), count);
-					UE_LOG(LogROS, VeryVerbose, TEXT("bytes_read is %d"), bytes_read);
-					UE_LOG(LogROS, VeryVerbose, TEXT("dest_len will be %i"), dest_len);
-					TCHAR* dest = new TCHAR[dest_len + 1];
-					TStringConvert<ANSICHAR, TCHAR>::Convert(dest, dest_len, (char*)(data.GetData()), data.Num());
-					dest[dest_len] = '\0';
-
-					result += dest;
-
-					delete[] dest;
-				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			}
-			if (result.Len() == 0) {
-				continue;
-			}
-
-			// TODO catch parse error properly
-			// auto j = json::parse(received_data);
-			json j;
-			j.Parse(TCHAR_TO_UTF8(*result));
-
-			if (_incoming_message_callback)
-				_incoming_message_callback(j);
-		}
-	}
-
-	return return_value;
-}
-*/
 
 void WebSocketConnection::RegisterIncomingMessageCallback(std::function<void(json&)> fun)
 {
@@ -251,4 +121,13 @@ void WebSocketConnection::SetTransportMode(rosbridge2cpp::ITransportLayer::Trans
 bool WebSocketConnection::IsHealthy() const
 {
 	return run_receiver_thread;
+}
+
+void WebSocketConnection::CleanupTempMessage()
+{
+	if (0 < _message_len)
+	{
+		delete[] _message;
+		_message_len = 0;
+	}
 }

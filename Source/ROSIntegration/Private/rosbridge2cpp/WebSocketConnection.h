@@ -1,31 +1,18 @@
 #pragma once
 
 #include <iostream>
-//#include <stdio.h>
-//#include <string>
-//#include <chrono>
 #include <thread>
 
-#include <functional> // std::function
+#include <functional>
 
-// #include "json.hpp"
 #include <CoreMinimal.h>
-//#include <ThreadingBase.h>
-//#include <Sockets.h>
-//#include <SocketSubsystem.h>
-//#include <Networking.h> // Unreal networking
 
-#include "IWebSocket.h"       // Socket definition
+#include "IWebSocket.h"
 
 #include "itransport_layer.h"
-#include "types.h"
-//
 
 #include "rapidjson/document.h"
 using json = rapidjson::Document;
-
-#include "rapidjson/writer.h"
-#include "rapidjson/stringbuffer.h"
 
 
 #pragma warning(disable:4265)
@@ -40,14 +27,13 @@ public:
 		}
 		if (_sock != nullptr) {
 			_sock->Close();
-			//ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(_sock);
 		}
+		CleanupTempMessage();
 	}
 
 	bool Init(std::string ip_addr, int port);
 	bool SendMessage(std::string data);
 	bool SendMessage(const uint8_t *data, unsigned int length);
-	// int ReceiverThreadFunction();
 	void RegisterIncomingMessageCallback(std::function<void(json&)> fun);
 	void RegisterIncomingMessageCallback(std::function<void(bson_t&)> fun);
 	void RegisterErrorCallback(std::function<void(rosbridge2cpp::TransportError)> fun);
@@ -71,6 +57,7 @@ private:
 	std::function<void(json&)> _incoming_message_callback;
 	std::function<void(bson_t&)> incoming_message_callback_bson_;
 	std::function<void(rosbridge2cpp::TransportError)> _error_callback;
+	void CleanupTempMessage();
 	uint8_t* _message;
 	size_t _message_len;
 };
