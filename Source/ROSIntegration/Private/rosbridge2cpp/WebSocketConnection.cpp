@@ -7,7 +7,7 @@
 
 #include "WebSocketsModule.h"
 #include "Containers/UnrealString.h"
-
+#include "Containers/StringConv.h"
 
 bool WebSocketConnection::Init(std::string ip_addr, int port)
 {
@@ -15,15 +15,25 @@ bool WebSocketConnection::Init(std::string ip_addr, int port)
 	_sock = FWebSocketsModule::Get().CreateWebSocket(TEXT("ws://127.0.0.1:9090/rosbridge"));
 
 
-	_sock->OnMessage().AddLambda([&](const FString& Message) -> void {
+	_sock->OnRawMessage().AddLambda([&](const void* data, size_t size, size_t bytes_remaining) -> void {
+		if (0 == _message_len) // alloc. for new messsage
+			_message = new uint8_t[size + bytes_remaining];
 
-		UE_LOG(LogROS, Display, TEXT("in ws->OnMessage: %s"), *Message.Left(33));
+		memcpy(_message + _message_len, data, size);
+		_message_len += size;
+		if (0 < bytes_remaining)
+			return; // partial, wait for more
+
 		if (bson_only_mode_)
 		{
 			bson_t b;
-			if (!bson_init_static(&b, reinterpret_cast<const uint8*>(*Message), Message.Len()))
+			bool init = bson_init_static(&b, _message, _message_len);
+
+			if (!init)
 			{
 				UE_LOG(LogROS, Error, TEXT("Error on BSON parse - Ignoring message"));
+				delete[] _message;
+				_message_len = 0;
 				return;
 			}
 			if (incoming_message_callback_bson_)
@@ -34,13 +44,13 @@ bool WebSocketConnection::Init(std::string ip_addr, int port)
 		else
 		{
 			json j;
-			j.Parse(TCHAR_TO_UTF8(*Message));
+			j.Parse(std::string(reinterpret_cast<const char*>(data)));
 
 			if (_incoming_message_callback)
 				_incoming_message_callback(j);
 		}
-
-		// This code will run when we receive a string message from the server.
+		delete[] _message;
+		_message_len = 0;
 		});
 
 	_sock->Connect();
@@ -69,34 +79,7 @@ bool WebSocketConnection::SendMessage(std::string data)
 
 bool WebSocketConnection::SendMessage(const uint8_t *data, unsigned int length)
 {
-	std::string s(reinterpret_cast<const char*>(data), length);
-
-	auto zx = BytesToString(data, length);
-
-	// FTCHARToUTF8 zz(*zx, zx.Len());
-	FTCHARToUTF8 zz(reinterpret_cast<const TCHAR*>(data), length);
-	FString toSend(TCHAR_TO_UTF8(s.c_str()));
-	_sock->Send(data, length, false);
-	// _sock->Send(*toSend, toSend.Len(), true);
-	//_sock->Send(*zx, zx.Len(), true);
-	// _sock->Send(zz.Get(), zz.Length(), true);
-
-	/*
-	uint8_t* zxc = new uint8_t[length+1];
-	zxc[0] = '\xc2';
-	for (unsigned int i = 0; i < length; ++i)
-		zxc[i + 1] = data[i];
-	// _sock->Send(data, length, true);
-	//_sock->Send(zxc, length+1, true);
-	delete[] zxc;
-	*/
-	UE_LOG(LogROS, Warning, TEXT("Send data[2.][%d]: %s"), length, *FString(length, s.c_str()));
-	//UE_LOG(LogROS, Warning, TEXT("Send data[2.][%d]: %s"), length+1, zxc);
-
-	// UE_LOG(LogROS, Warning, TEXT("Send data[2a][%d]: %s"), zx.Len(), *zx);
-	// UE_LOG(LogROS, Warning, TEXT("Send data[2a][%d]: %s"), zz.Length(), zz.Get());
-	// UE_LOG(LogROS, Warning, TEXT("Send data[x2a][%d]: %s"), FString(UTF8_TO_TCHAR(*toSend)).Len(), *FString(UTF8_TO_TCHAR(*toSend)));
-
+	_sock->Send(data, length, true);
 	return true;
 }
 /*

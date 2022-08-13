@@ -71,5 +71,7 @@ private:
 	std::function<void(json&)> _incoming_message_callback;
 	std::function<void(bson_t&)> incoming_message_callback_bson_;
 	std::function<void(rosbridge2cpp::TransportError)> _error_callback;
+	uint8_t* _message;
+	size_t _message_len;
 };
 #pragma warning(default:4265)
