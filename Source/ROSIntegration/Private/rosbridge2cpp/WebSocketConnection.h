@@ -59,6 +59,6 @@ private:
 	std::function<void(rosbridge2cpp::TransportError)> _error_callback;
 	void CleanupTempMessage();
 	uint8_t* _message;
-	size_t _message_len;
+	size_t _message_len = 0;
 };
 #pragma warning(default:4265)
