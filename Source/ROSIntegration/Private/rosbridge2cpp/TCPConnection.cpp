@@ -30,6 +30,7 @@ bool TCPConnection::Init(std::string ip_addr, int port)
 	}
 
 	_sock = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateSocket(NAME_Stream, TEXT("Rosbridge TCP client"), false);
+	UE_LOG(LogROS, Display, TEXT("in TCPConnection::Init, _sock created! [%p] <<=== this:[%p]"), _sock, this);
 
 	/*const int32 ReceiveBufferSize = 4000000;
 	int32 ReceiveBufferSizeSet = 4000000;
@@ -119,7 +120,6 @@ int TCPConnection::ReceiverThreadFunction()
 	int return_value = 0;
 
 	while (run_receiver_thread) {
-		//UE_LOG(LogTemp, Warning, TEXT("SOCK IS OK? %d -**-*-*--*-**-*--*-**-*--**-"), static_cast<bool>(_sock));
 		ESocketConnectionState ConnectionState = _sock->GetConnectionState();
 		if (ConnectionState != ESocketConnectionState::SCS_Connected) {
 			if (ConnectionState == SCS_NotConnected) {

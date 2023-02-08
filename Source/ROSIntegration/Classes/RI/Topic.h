@@ -6,7 +6,9 @@
 #include <UObject/ObjectMacros.h>
 #include <UObject/Object.h>
 #include "ROSBaseMsg.h"
+#include "ROSBPMsg.h"
 #include "ROSIntegrationCore.h"
+#include "viz/ROSBridgeConnection.h"
 
 #include "Topic.generated.h"
 
@@ -40,7 +42,10 @@ public:
 
 	void BeginDestroy() override;
 
-	void Init(UROSIntegrationCore *Ric, FString Topic, FString MessageType, int32 QueueSize = 10);
+	UFUNCTION(BlueprintCallable, Category = "ROS|Topic")
+	void BaseInit(AROSBridgeConnection* conn, FString Topic, FString MessageType, int32 QueueSize = 10);
+
+	void Init(UROSIntegrationCore* Ric, FString Topic, FString MessageType, int32 QueueSize = 10);
 
 	virtual void PostInitProperties() override;
 
@@ -62,8 +67,14 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = ROS)
 	void OnFloat32Message(const float& Data);
 
+	UFUNCTION(BlueprintImplementableEvent, Category = ROS)
+	void OnROSMessage(const UROSBPMsg* message);
+
 	UPROPERTY()
 	UROSIntegrationCore* _ROSIntegrationCore = nullptr;
+
+	UPROPERTY()
+	AROSBridgeConnection* _bridgeConnection;
 
 private:
 
@@ -89,8 +100,13 @@ private:
 	UFUNCTION(BlueprintCallable, Category = "ROS|Topic")
 	bool PublishStringMessage(const FString& Message);
 
+	UFUNCTION(BlueprintCallable, Category = "ROS|Topic")
+	bool PublishROSMessage(UROSBPMsg* message);
+
 	// Helper to keep track of self-destruction for async functions
 	TSharedPtr<UTopic, ESPMode::ThreadSafe> _SelfPtr;
+
+	UPROPERTY() UROSBPMsg* _rosMsg;
 
 	// PIMPL
 	class Impl;

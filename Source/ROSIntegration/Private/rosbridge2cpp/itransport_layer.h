@@ -15,6 +15,9 @@ namespace rosbridge2cpp {
 	public:
 		enum TransportMode { JSON, BSON };
 
+
+		virtual ~ITransportLayer() {};
+
 		// Initialize the TransportLayer by connecting to the given IP and port
 		// The implementing class should have an active connection to IP:port
 		// when the method has been executed completly.

@@ -19,7 +19,6 @@ namespace ROSMessages{
 			uint32 seq;
 			FROSTime time;
 			FString frame_id;
-			bool _ros2;
 		};
 	}
 }

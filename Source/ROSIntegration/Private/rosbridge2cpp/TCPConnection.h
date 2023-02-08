@@ -32,7 +32,7 @@ class TCPConnection : public rosbridge2cpp::ITransportLayer {
 public:
 	TCPConnection() {
 	}
-	~TCPConnection() {
+	virtual ~TCPConnection() {
 		run_receiver_thread = false;
 		if (receiverThreadSetUp) {
 			receiverThread.join(); // Wait for the receiver thread to finish

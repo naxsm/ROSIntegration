@@ -32,6 +32,7 @@ protected:
 public:	
 	AROSBridgeConnection();
 
+	UFUNCTION(BlueprintCallable, Category = "rosbridge")
 	UROSIntegrationCore* GetCore()
 	{
 		return ROSIntegrationCore;

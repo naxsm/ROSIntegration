@@ -47,7 +47,8 @@ public:
 
 	static void _bson_append_header(bson_t *b, const ROSMessages::std_msgs::Header *msg)
 	{
-		BSON_APPEND_INT32(b, "seq", msg->seq);
+		if (!msg->_ros2)
+			BSON_APPEND_INT32(b, "seq", msg->seq);
 
 		// bson_t stamp;
 		// BSON_APPEND_DOCUMENT_BEGIN(b, "stamp", &stamp);

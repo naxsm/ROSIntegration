@@ -261,17 +261,24 @@ public:
 			_Connection = new WebSocketConnection();
 		if (_Connection)
 			_Ros = new rosbridge2cpp::ROSBridge(*_Connection);
+		UE_LOG(LogROS, Display, TEXT("UROSIntegrationCore Impl() _Ros=[%p], _Connection=[%p]"), _Ros, _Connection);
 	}
 
 	~Impl()
 	{
-		UE_LOG(LogROS, Display, TEXT("UROSIntegrationCore ~Impl() "));
-		//_World = nullptr;
+		UE_LOG(LogROS, Display, TEXT("UROSIntegrationCore ~Impl() _Ros=[%p], _Connection=[%p]"), _Ros, _Connection);
+		_World = nullptr;
 		_SpawnManager = nullptr;
 		if (_Ros)
+		{
 			delete _Ros;
+			_Ros = nullptr;
+		}
 		if (_Connection)
+		{
 			delete _Connection;
+			_Connection = nullptr;
+		}
 	}
 
 	bool IsHealthy() const

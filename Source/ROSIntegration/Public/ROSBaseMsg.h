@@ -9,4 +9,5 @@ public:
 	~FROSBaseMsg() = default;
 
 	FString _MessageType;
+	bool _ros2;
 };

@@ -38,7 +38,10 @@ namespace ROSMessages {
 
 			~PointCloud2() {
 				if (data)
+				{
 					delete[] data;
+					data = nullptr;
+				}
 			}
 
 			ROSMessages::std_msgs::Header header;

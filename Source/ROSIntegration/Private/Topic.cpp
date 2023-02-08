@@ -100,7 +100,7 @@ public:
 	{
 		bson_t *bson_message = nullptr;
 
-		if (ConvertMessage(msg, &bson_message)) {
+		if (msg.IsValid() && ConvertMessage(msg, &bson_message)) {
 			return _ROSTopic->Publish(bson_message); // bson memory will be freed in the rosbridge core code after the message is published
 		}
 		else {
@@ -165,6 +165,7 @@ public:
 UTopic::UTopic(const FObjectInitializer& ObjectInitializer)
 : Super(ObjectInitializer)
 , _SelfPtr(this, TDeleterNot())
+, _rosMsg(NewObject<UROSBPMsg>())
 , _Implementation(new UTopic::Impl())
 {
 	_State.Connected = true;
@@ -235,6 +236,11 @@ bool UTopic::Publish(TSharedPtr<FROSBaseMsg> msg)
 	return _State.Connected && _Implementation->Publish(msg);
 }
 
+void UTopic::BaseInit(AROSBridgeConnection* conn, FString Topic, FString MessageType, int32 QueueSize)
+{
+	Init(conn->GetCore(), Topic, MessageType, QueueSize);
+}
+
 void UTopic::Init(UROSIntegrationCore *Ric, FString Topic, FString MessageType, int32 QueueSize)
 {
 	_ROSIntegrationCore = Ric;
@@ -288,7 +294,7 @@ void UTopic::Init(const FString& TopicName, EMessageType MessageType, int32 Queu
 {
 	_State.Blueprint = true;
 	_State.BlueprintMessageType = MessageType;
-
+	
 	UROSIntegrationGameInstance* ROSInstance = Cast<UROSIntegrationGameInstance>(GWorld->GetGameInstance());
 	if (ROSInstance)
 	{
@@ -301,6 +307,7 @@ void UTopic::Init(const FString& TopicName, EMessageType MessageType, int32 Queu
 	{
 		UE_LOG(LogROS, Warning, TEXT("ROSIntegrationGameInstance does not exist."));
 	}
+	
 }
 
 bool UTopic::Subscribe()
@@ -346,7 +353,8 @@ bool UTopic::Subscribe()
 				break;
 			}
 			default:
-				unimplemented();
+				UROSBPMsg m(msg);
+				OnROSMessage(&m);
 				break;
 			}
 		};
@@ -373,4 +381,25 @@ bool UTopic::PublishStringMessage(const FString& Message)
 	TSharedPtr<ROSMessages::std_msgs::String> msg = MakeShareable(new ROSMessages::std_msgs::String);
 	msg->_Data = Message;
 	return _Implementation->Publish(msg);
+}
+
+bool UTopic::PublishROSMessage(UROSBPMsg* message)
+//bool UTopic::PublishROSMessage(TSharedPtr<UROSBPMsg> message)
+{
+	auto addr0 = &message;
+
+	if (!_State.Advertised)
+	{
+		if (!Advertise())
+		{
+			return false;
+		}
+	}
+
+	//return _Implementation->Publish(MakeShareable(const_cast<FROSBaseMsg*>(message->msg)));
+	//auto smsg = MakeShareable(message->msg);
+	//return _Implementation->Publish(smsg);
+	return _Implementation->Publish(message->msg);
+	//return _Implementation->Publish(MakeShareable(message.Get()->msg));
+	//return true;
 }
