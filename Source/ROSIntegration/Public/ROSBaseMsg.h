@@ -2,9 +2,7 @@
 
 #include <CoreMinimal.h>
 
-//USTRUCT()
-struct ROSINTEGRATION_API FROSBaseMsg {
-	//GENERATED_BODY()
+class ROSINTEGRATION_API FROSBaseMsg {
 
 public:
 	FROSBaseMsg() = default;

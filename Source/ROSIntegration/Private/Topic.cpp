@@ -357,7 +357,6 @@ bool ATopic::PublishStringMessage(const FString& Message)
 }
 
 bool ATopic::PublishROSMessage(UROSBPMsg* message)
-//bool ATopic::PublishROSMessage(TSharedPtr<UROSBPMsg> message)
 {
 	auto addr0 = &message;
 
@@ -369,12 +368,7 @@ bool ATopic::PublishROSMessage(UROSBPMsg* message)
 		}
 	}
 
-	//return _Implementation->Publish(MakeShareable(const_cast<FROSBaseMsg*>(message->msg)));
-	//auto smsg = MakeShareable(message->msg);
-	//return _Implementation->Publish(smsg);
 	if (message)
 		return _Implementation->Publish(message->msg);
 	return false;
-	//return _Implementation->Publish(MakeShareable(message.Get()->msg));
-	//return true;
 }

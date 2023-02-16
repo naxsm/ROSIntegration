@@ -29,18 +29,7 @@ void UROSBPMsg::castToInt32(int32& value, bool& success)
 UROSBPMSG_CAST_STD_MSG(Int32)
 
 void UROSBPMsg::castToString(FString& value, bool& success)
-//UROSBPMSG_CAST_STD_MSG(String)
-{
-		if (msg->_MessageType != "std_msgs/String")
-		{
-			success = false;
-			return;
-		}
-		auto p = StaticCastSharedPtr<ROSMessages::std_msgs::String>(msg);
-		value = p->_Data;
-		success = true;
-}
-
+UROSBPMSG_CAST_STD_MSG(String)
 
 void UROSBPMsg::castToUInt8(uint8& value, bool& success)
 UROSBPMSG_CAST_STD_MSG(UInt8)
