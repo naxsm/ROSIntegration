@@ -63,7 +63,7 @@ protected:
 	FCriticalSection initMutex_;
 
 	UPROPERTY()
-	class UTopic* ClockTopic = nullptr;
+	class ATopic* ClockTopic = nullptr;
 };
 
 

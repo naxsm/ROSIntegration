@@ -65,7 +65,7 @@ public:
 	void SetFramerate(const float _FrameRate);
 
 	UPROPERTY()
-	UTopic *_TFTopic;
+	ATopic *_TFTopic;
 
 	// Returns null if no parent has been found
 	AActor *GetParentActor();

@@ -29,7 +29,7 @@ void UTFBroadcastComponent::BeginPlay()
 
 	assert(GetOwner());
 
-	_TFTopic = NewObject<UTopic>(UTopic::StaticClass());
+	_TFTopic = NewObject<ATopic>(ATopic::StaticClass());
 	UROSIntegrationGameInstance* ROSInstance = Cast<UROSIntegrationGameInstance>(GetOwner()->GetGameInstance());
 	_TFTopic->Init(ROSInstance->ROSIntegrationCore, TEXT("/tf"), TEXT("tf2_msgs/TFMessage"));
 }

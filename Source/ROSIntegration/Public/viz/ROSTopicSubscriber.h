@@ -40,7 +40,7 @@ private:
 	AROSBridgeConnection* _bridgeConnection;
 
 	UPROPERTY()
-	UTopic* _topic;
+	ATopic* _topic;
 
 	bool _gotNewData = false;
 

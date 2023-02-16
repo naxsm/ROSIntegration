@@ -28,7 +28,7 @@ void UROSTopicSubscriber::Init(AROSBridgeConnection* bridgeConnection, const FSt
 	_topicName = topicName;
 	if (bridgeConnection)
 	{
-		_topic = NewObject<UTopic>(UTopic::StaticClass());
+		_topic = NewObject<ATopic>(ATopic::StaticClass());
 		_topic->Init(_bridgeConnection->GetCore(), topicName, msgType, 100);
 		if (subscribe)
 			_topic->Subscribe(_callback);

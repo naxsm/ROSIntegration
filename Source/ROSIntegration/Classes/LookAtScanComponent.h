@@ -91,7 +91,7 @@ protected:
 		return;
 	};
 
-	UTopic *ExampleTopic;
+	ATopic *ExampleTopic;
 
 public:
 	// Called every frame

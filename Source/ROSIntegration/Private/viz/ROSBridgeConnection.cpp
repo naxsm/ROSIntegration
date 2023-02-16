@@ -10,9 +10,8 @@ AROSBridgeConnection::AROSBridgeConnection()
 
 void AROSBridgeConnection::BeginPlay()
 {
-	if (!ROSIntegrationCore)
-		ROSIntegrationCore = NewObject<UROSIntegrationCore>(UROSIntegrationCore::StaticClass());
-	bool conn = ROSIntegrationCore->Init(host, port, connType);
+	if (!connected)
+		Init();
 	Super::BeginPlay();
 }
 
@@ -23,6 +22,15 @@ void AROSBridgeConnection::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	{
 		ROSIntegrationCore->ConditionalBeginDestroy();
 		ROSIntegrationCore = nullptr;
+	}
+}
+
+void AROSBridgeConnection::Init()
+{
+	if (!ROSIntegrationCore)
+	{
+		ROSIntegrationCore = NewObject<UROSIntegrationCore>(UROSIntegrationCore::StaticClass());
+		connected = ROSIntegrationCore->Init(host, port, connType);
 	}
 }
 

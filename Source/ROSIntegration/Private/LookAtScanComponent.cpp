@@ -24,7 +24,7 @@ void ULookAtScanComponent::BeginPlay()
 		return;
 	}
 
-	ExampleTopic = NewObject<UTopic>(UTopic::StaticClass());
+	ExampleTopic = NewObject<ATopic>(ATopic::StaticClass());
 
 	UROSIntegrationGameInstance* ROSInstance = Cast<UROSIntegrationGameInstance>(OwningActor->GetGameInstance());
 	ExampleTopic->Init(ROSInstance->ROSIntegrationCore, CommandTopic, TEXT("std_msgs/String"));

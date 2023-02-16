@@ -10,7 +10,7 @@ static TMap<EMessageType, FString> SupportedMessageTypes;
 
 
 // PIMPL
-class UTopic::Impl {
+class ATopic::Impl {
 	// hidden implementation details
 public:
 	Impl()
@@ -60,7 +60,7 @@ public:
 			Unsubscribe();
 		}
 
-		_CallbackHandle = _ROSTopic->Subscribe(std::bind(&UTopic::Impl::MessageCallback, this, std::placeholders::_1));
+		_CallbackHandle = _ROSTopic->Subscribe(std::bind(&ATopic::Impl::MessageCallback, this, std::placeholders::_1));
 		_Callback = func;
 		return _CallbackHandle.IsValid();
 	}
@@ -104,7 +104,7 @@ public:
 			return _ROSTopic->Publish(bson_message); // bson memory will be freed in the rosbridge core code after the message is published
 		}
 		else {
-			UE_LOG(LogROS, Error, TEXT("Failed to ConvertMessage in UTopic::Publish()"));
+			UE_LOG(LogROS, Error, TEXT("Failed to ConvertMessage in ATopic::Publish()"));
 			return false;
 		}
 	}
@@ -162,11 +162,10 @@ public:
 
 // Interface Implementation
 
-UTopic::UTopic(const FObjectInitializer& ObjectInitializer)
+ATopic::ATopic(const FObjectInitializer& ObjectInitializer)
 : Super(ObjectInitializer)
 , _SelfPtr(this, TDeleterNot())
-, _rosMsg(NewObject<UROSBPMsg>())
-, _Implementation(new UTopic::Impl())
+, _Implementation(new ATopic::Impl())
 {
 	_State.Connected = true;
 	_State.Advertised = false;
@@ -180,7 +179,7 @@ UTopic::UTopic(const FObjectInitializer& ObjectInitializer)
 	}
 }
 
-void UTopic::PostInitProperties()
+void ATopic::PostInitProperties()
 {
 	Super::PostInitProperties();
 
@@ -190,7 +189,7 @@ void UTopic::PostInitProperties()
 	}
 }
 
-void UTopic::BeginDestroy() {
+void ATopic::BeginDestroy() {
 
 	if (_Implementation && (!_State.Connected || !_ROSIntegrationCore || _ROSIntegrationCore->HasAnyFlags(EObjectFlags::RF_BeginDestroyed)))
 	{
@@ -207,58 +206,66 @@ void UTopic::BeginDestroy() {
 	_SelfPtr.Reset();
 }
 
-bool UTopic::Subscribe(std::function<void(TSharedPtr<FROSBaseMsg>)> func)
+void ATopic::BeginPlay()
+{
+	BaseInit(_bridgeConnection, _topicName, _messageType, _queueSize);
+	Super::BeginPlay();
+}
+
+bool ATopic::Subscribe(std::function<void(TSharedPtr<FROSBaseMsg>)> func)
 {
 	_State.Subscribed = true;
 	return _State.Connected && _Implementation->Subscribe(func);
 }
 
-bool UTopic::Unsubscribe()
+bool ATopic::Unsubscribe()
 {
 	_State.Subscribed = false;
 	return _State.Connected && _Implementation && _Implementation->Unsubscribe();
 }
 
-bool UTopic::Advertise()
+bool ATopic::Advertise()
 {
 	_State.Advertised = true;
 	return _State.Connected && _Implementation->Advertise();
 }
 
-bool UTopic::Unadvertise()
+bool ATopic::Unadvertise()
 {
 	_State.Advertised = false;
 	return _State.Connected && _Implementation->Unadvertise();
 }
 
-bool UTopic::Publish(TSharedPtr<FROSBaseMsg> msg)
+bool ATopic::Publish(TSharedPtr<FROSBaseMsg> msg)
 {
 	return _State.Connected && _Implementation->Publish(msg);
 }
 
-void UTopic::BaseInit(AROSBridgeConnection* conn, FString Topic, FString MessageType, int32 QueueSize)
+void ATopic::BaseInit(AROSBridgeConnection* conn, FString Topic, FString MessageType, int32 QueueSize)
 {
+	if (!conn->connected) // FIXME: there should be a better way
+		conn->Init();
 	Init(conn->GetCore(), Topic, MessageType, QueueSize);
 }
 
-void UTopic::Init(UROSIntegrationCore *Ric, FString Topic, FString MessageType, int32 QueueSize)
+void ATopic::Init(UROSIntegrationCore *Ric, FString Topic, FString MessageType, int32 QueueSize)
 {
 	_ROSIntegrationCore = Ric;
 	_Implementation->Init(Ric, Topic, MessageType, QueueSize);
 }
 
-void UTopic::MarkAsDisconnected()
+void ATopic::MarkAsDisconnected()
 {
 	_State.Connected = false;
 }
 
-bool UTopic::Reconnect(UROSIntegrationCore* ROSIntegrationCore)
+bool ATopic::Reconnect(UROSIntegrationCore* ROSIntegrationCore)
 {
 	bool success = true;
 	_ROSIntegrationCore = ROSIntegrationCore;
 
 	Impl* oldImplementation = _Implementation;
-	_Implementation = new UTopic::Impl();
+	_Implementation = new ATopic::Impl();
 	_Implementation->Init(ROSIntegrationCore, oldImplementation->_Topic, oldImplementation->_MessageType, oldImplementation->_QueueSize);
 
 	_State.Connected = true;
@@ -280,17 +287,17 @@ bool UTopic::Reconnect(UROSIntegrationCore* ROSIntegrationCore)
 	return success;
 }
 
-bool UTopic::IsAdvertising() 
+bool ATopic::IsAdvertising() 
 {
 	return _State.Advertised;
 }
 
-FString UTopic::GetDetailedInfoInternal() const
+FString ATopic::GetDetailedInfoInternal() const
 {
 	return _Implementation->_Topic;
 }
 
-void UTopic::Init(const FString& TopicName, EMessageType MessageType, int32 QueueSize)
+void ATopic::Init(const FString& TopicName, EMessageType MessageType, int32 QueueSize)
 {
 	_State.Blueprint = true;
 	_State.BlueprintMessageType = MessageType;
@@ -310,7 +317,7 @@ void UTopic::Init(const FString& TopicName, EMessageType MessageType, int32 Queu
 	
 }
 
-bool UTopic::Subscribe()
+bool ATopic::Subscribe()
 {
 	bool success = false;
 	_State.Subscribed = true;
@@ -320,43 +327,9 @@ bool UTopic::Subscribe()
 		EMessageType MessageType = _State.BlueprintMessageType;
 		std::function<void(TSharedPtr<FROSBaseMsg>)> Callback = [this, MessageType](TSharedPtr<FROSBaseMsg> msg) -> void
 		{
-			switch (MessageType)
-			{
-			case EMessageType::String:
-			{
-				auto ConcreteStringMessage = StaticCastSharedPtr<ROSMessages::std_msgs::String>(msg);
-				if (ConcreteStringMessage.IsValid())
-				{
-					const FString Data = ConcreteStringMessage->_Data;
-					TWeakPtr<UTopic, ESPMode::ThreadSafe> SelfPtr(_SelfPtr);
-					AsyncTask(ENamedThreads::GameThread, [this, Data, SelfPtr]()
-					{
-						if (!SelfPtr.IsValid()) return;
-						OnStringMessage(Data);
-					});
-				}
-				break;
-			}
-			case EMessageType::Float32:
-			{
-				auto ConcreteFloatMessage = StaticCastSharedPtr<ROSMessages::std_msgs::Float32>(msg);
-				if (ConcreteFloatMessage.IsValid())
-				{
-					const float Data = ConcreteFloatMessage->_Data;
-					TWeakPtr<UTopic, ESPMode::ThreadSafe> SelfPtr(_SelfPtr);
-					AsyncTask(ENamedThreads::GameThread, [this, Data, SelfPtr]()
-					{
-						if (!SelfPtr.IsValid()) return;
-						OnFloat32Message(Data);
-					});
-				}
-				break;
-			}
-			default:
-				UROSBPMsg m(msg);
-				OnROSMessage(&m);
-				break;
-			}
+			UROSBPMsg* rosMsg = NewObject<UROSBPMsg>();
+			rosMsg->msg = msg;
+			OnROSMessage(rosMsg);
 		};
 
 		success = Subscribe(Callback);
@@ -366,7 +339,7 @@ bool UTopic::Subscribe()
 }
 
 
-bool UTopic::PublishStringMessage(const FString& Message)
+bool ATopic::PublishStringMessage(const FString& Message)
 {
 	check(_Implementation->_MessageType == TEXT("std_msgs/String"));
 
@@ -383,8 +356,8 @@ bool UTopic::PublishStringMessage(const FString& Message)
 	return _Implementation->Publish(msg);
 }
 
-bool UTopic::PublishROSMessage(UROSBPMsg* message)
-//bool UTopic::PublishROSMessage(TSharedPtr<UROSBPMsg> message)
+bool ATopic::PublishROSMessage(UROSBPMsg* message)
+//bool ATopic::PublishROSMessage(TSharedPtr<UROSBPMsg> message)
 {
 	auto addr0 = &message;
 
@@ -399,7 +372,9 @@ bool UTopic::PublishROSMessage(UROSBPMsg* message)
 	//return _Implementation->Publish(MakeShareable(const_cast<FROSBaseMsg*>(message->msg)));
 	//auto smsg = MakeShareable(message->msg);
 	//return _Implementation->Publish(smsg);
-	return _Implementation->Publish(message->msg);
+	if (message)
+		return _Implementation->Publish(message->msg);
+	return false;
 	//return _Implementation->Publish(MakeShareable(message.Get()->msg));
 	//return true;
 }

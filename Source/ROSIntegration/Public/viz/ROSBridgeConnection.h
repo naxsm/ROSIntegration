@@ -10,7 +10,7 @@
 #include "ROSBridgeConnection.generated.h"
 
 
-UCLASS()
+UCLASS(Blueprintable, BlueprintType, Placeable, meta = (BlueprintSpawnableComponent))
 class ROSINTEGRATION_API AROSBridgeConnection : public AActor
 {
 	GENERATED_BODY()
@@ -25,6 +25,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "rosbridge")
 	EROSConnType connType = EROSConnType::TCPConn;
 
+	UPROPERTY()
+	bool connected;
+
 protected:
 	UPROPERTY()
 	UROSIntegrationCore* ROSIntegrationCore = nullptr;
@@ -37,6 +40,9 @@ public:
 	{
 		return ROSIntegrationCore;
 	}
+
+	UFUNCTION(BlueprintCallable, Category = "rosbridge")
+	void Init();
 
 protected:
 

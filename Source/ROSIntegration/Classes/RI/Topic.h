@@ -23,12 +23,13 @@ enum class EMessageType : uint8
 	Float32 = 1,
 };
 
-UCLASS(Blueprintable)
-class ROSINTEGRATION_API UTopic: public UObject
+UCLASS(Blueprintable, BlueprintType, Placeable, meta = (BlueprintSpawnableComponent))
+class ROSINTEGRATION_API ATopic: public AActor
 {
 	GENERATED_UCLASS_BODY()
 
 public:
+	virtual void BeginPlay() override;
 
 	bool Subscribe(std::function<void(TSharedPtr<FROSBaseMsg>)> func);
 
@@ -73,8 +74,15 @@ protected:
 	UPROPERTY()
 	UROSIntegrationCore* _ROSIntegrationCore = nullptr;
 
-	UPROPERTY()
+public:
+	UPROPERTY(EditAnywhere, Category = "ROS")
 	AROSBridgeConnection* _bridgeConnection;
+	UPROPERTY(EditAnywhere, Category = "ROS")
+	FString _topicName;
+	UPROPERTY(EditAnywhere, Category = "ROS")
+	FString _messageType = "std_msgs/String";
+	UPROPERTY(EditAnywhere, Category = "ROS")
+	int32 _queueSize = 1;
 
 private:
 
@@ -104,9 +112,7 @@ private:
 	bool PublishROSMessage(UROSBPMsg* message);
 
 	// Helper to keep track of self-destruction for async functions
-	TSharedPtr<UTopic, ESPMode::ThreadSafe> _SelfPtr;
-
-	UPROPERTY() UROSBPMsg* _rosMsg;
+	TSharedPtr<ATopic, ESPMode::ThreadSafe> _SelfPtr;
 
 	// PIMPL
 	class Impl;

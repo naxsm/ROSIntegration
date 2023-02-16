@@ -94,6 +94,6 @@ private:
 
 	bool _bson_test_mode = true;
 
-	friend class UTopic;
+	friend class ATopic;
 	friend class UService;
 };

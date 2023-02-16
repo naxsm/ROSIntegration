@@ -10,9 +10,9 @@
 
 static void UnsubscribeAndUnadvertiseAllTopics()
 {
-	for (TObjectIterator<UTopic> It; It; ++It)
+	for (TObjectIterator<ATopic> It; It; ++It)
 	{
-		UTopic* Topic = *It;
+		ATopic* Topic = *It;
 		Topic->Unadvertise(); // to make sure all topics are unadvertised on ROS side
 		Topic->Unsubscribe(); // to prevent messages arriving during shutdown from triggering subscription callbacks
 		Topic->MarkAsDisconnected();
@@ -21,9 +21,9 @@ static void UnsubscribeAndUnadvertiseAllTopics()
 
 static void MarkAllROSObjectsAsDisconnected()
 {
-	for (TObjectIterator<UTopic> It; It; ++It)
+	for (TObjectIterator<ATopic> It; It; ++It)
 	{
-		UTopic* Topic = *It;
+		ATopic* Topic = *It;
 
 		Topic->MarkAsDisconnected();  
 	}
@@ -119,7 +119,7 @@ void UROSIntegrationGameInstance::Init()
 
 			FWorldDelegates::OnWorldTickStart.AddUObject(this, &UROSIntegrationGameInstance::OnWorldTickStart);
 
-			ClockTopic = NewObject<UTopic>(UTopic::StaticClass()); // ORIGINAL
+			ClockTopic = NewObject<ATopic>(ATopic::StaticClass()); // ORIGINAL
 
 			ClockTopic->Init(ROSIntegrationCore, FString(TEXT("/clock")), FString(TEXT("rosgraph_msgs/Clock")), 3);
 
@@ -158,9 +158,9 @@ void UROSIntegrationGameInstance::CheckROSBridgeHealth()
 
 	// tell everyone (Topics, Services, etc.) they can try to reconnect (subscribe and advertise)
 	{
-		for (TObjectIterator<UTopic> It; It; ++It)
+		for (TObjectIterator<ATopic> It; It; ++It)
 		{
-			UTopic* Topic = *It;
+			ATopic* Topic = *It;
 
 			bool success = Topic->Reconnect(ROSIntegrationCore);
 			if (!success)
