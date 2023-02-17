@@ -23,7 +23,7 @@ enum class EMessageType : uint8
 	Float32 = 1,
 };
 
-UCLASS(Blueprintable, BlueprintType, Placeable, meta = (BlueprintSpawnableComponent))
+UCLASS(Blueprintable, BlueprintType, meta = (BlueprintSpawnableComponent))
 class ROSINTEGRATION_API ATopic: public AActor
 {
 	GENERATED_UCLASS_BODY()

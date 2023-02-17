@@ -10,7 +10,7 @@
 #include "ROSBridgeConnection.generated.h"
 
 
-UCLASS(Blueprintable, BlueprintType, Placeable, meta = (BlueprintSpawnableComponent))
+UCLASS(Blueprintable, BlueprintType, meta = (BlueprintSpawnableComponent))
 class ROSINTEGRATION_API AROSBridgeConnection : public AActor
 {
 	GENERATED_BODY()
