@@ -21,6 +21,16 @@ enum class EMessageType : uint8
 {
 	String = 0,
 	Float32 = 1,
+	Header = 8,
+	Int32 = 11,
+	Int64 = 12,
+	Vector3 = 2,
+	Point = 17,
+	Pose = 16,
+	Quaternion = 18,
+	Twist = 19,
+	Bool,
+	UInt8,
 };
 
 UCLASS(Blueprintable, BlueprintType, meta = (BlueprintSpawnableComponent))
@@ -30,6 +40,8 @@ class ROSINTEGRATION_API ATopic: public AActor
 
 public:
 	virtual void BeginPlay() override;
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	bool Subscribe(std::function<void(TSharedPtr<FROSBaseMsg>)> func);
 
@@ -44,7 +56,7 @@ public:
 	void BeginDestroy() override;
 
 	UFUNCTION(BlueprintCallable, Category = "ROS|Topic")
-	void BaseInit(AROSBridgeConnection* conn, FString Topic, FString MessageType, int32 QueueSize = 10);
+	void BaseInit(AROSBridgeConnection* conn, FString Topic, EMessageType MessageType, int32 QueueSize = 10);
 
 	void Init(UROSIntegrationCore* Ric, FString Topic, FString MessageType, int32 QueueSize = 10);
 
@@ -66,7 +78,16 @@ protected:
 	void OnStringMessage(const FString& Data);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = ROS)
-	void OnFloat32Message(const float& Data);
+	void OnBoolMessage(bool Data);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = ROS)
+	void OnInt32Message(int32 Data);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = ROS)
+	void OnFloat32Message(float Data);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = ROS)
+	void OnUInt8Message(uint8 Data);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = ROS)
 	void OnROSMessage(const UROSBPMsg* message);
@@ -77,13 +98,16 @@ protected:
 public:
 	UPROPERTY(EditAnywhere, Category = "ROS")
 	AROSBridgeConnection* _bridgeConnection;
+	
 	UPROPERTY(EditAnywhere, Category = "ROS")
 	FString _topicName;
+	
 	UPROPERTY(EditAnywhere, Category = "ROS")
-	FString _messageType = "std_msgs/String";
+	//FString _messageType = "std_msgs/String";
+	EMessageType _messageType = EMessageType::String;
+	
 	UPROPERTY(EditAnywhere, Category = "ROS")
 	int32 _queueSize = 1;
-
 private:
 
 	struct State
@@ -106,13 +130,28 @@ private:
 	bool Subscribe();
 
 	UFUNCTION(BlueprintCallable, Category = "ROS|Topic")
+	bool PublishBoolMessage(bool Message);
+
+	UFUNCTION(BlueprintCallable, Category = "ROS|Topic")
+	bool PublishFloat32Message(float Message);
+
+	UFUNCTION(BlueprintCallable, Category = "ROS|Topic")
+	bool PublishInt32Message(int32 Message);
+
+	UFUNCTION(BlueprintCallable, Category = "ROS|Topic")
 	bool PublishStringMessage(const FString& Message);
+
+	UFUNCTION(BlueprintCallable, Category = "ROS|Topic")
+	bool PublishUInt8Message(uint8 Message);
 
 	UFUNCTION(BlueprintCallable, Category = "ROS|Topic")
 	bool PublishROSMessage(UROSBPMsg* message);
 
 	// Helper to keep track of self-destruction for async functions
 	TSharedPtr<ATopic, ESPMode::ThreadSafe> _SelfPtr;
+
+	//UPROPERTY()
+	//UROSBPMsg* rosMsg;
 
 	// PIMPL
 	class Impl;

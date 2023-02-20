@@ -176,6 +176,9 @@ ATopic::ATopic(const FObjectInitializer& ObjectInitializer)
 	{
 		SupportedMessageTypes.Add(EMessageType::String, TEXT("std_msgs/String"));
 		SupportedMessageTypes.Add(EMessageType::Float32, TEXT("std_msgs/Float32"));
+		SupportedMessageTypes.Add(EMessageType::Bool, TEXT("std_msgs/Bool"));
+		SupportedMessageTypes.Add(EMessageType::Int32, TEXT("std_msgs/Int32"));
+		SupportedMessageTypes.Add(EMessageType::UInt8, TEXT("std_msgs/UInt8"));
 	}
 }
 
@@ -208,8 +211,17 @@ void ATopic::BeginDestroy() {
 
 void ATopic::BeginPlay()
 {
+	//rosMsg = NewObject<UROSBPMsg>(this, UROSBPMsg::StaticClass());
 	BaseInit(_bridgeConnection, _topicName, _messageType, _queueSize);
 	Super::BeginPlay();
+}
+
+void ATopic::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+	Unsubscribe();
+	Unadvertise();
+	MarkAsDisconnected();
 }
 
 bool ATopic::Subscribe(std::function<void(TSharedPtr<FROSBaseMsg>)> func)
@@ -241,11 +253,18 @@ bool ATopic::Publish(TSharedPtr<FROSBaseMsg> msg)
 	return _State.Connected && _Implementation->Publish(msg);
 }
 
-void ATopic::BaseInit(AROSBridgeConnection* conn, FString Topic, FString MessageType, int32 QueueSize)
+void ATopic::BaseInit(AROSBridgeConnection* conn, FString Topic, EMessageType MessageType, int32 QueueSize)
 {
+	if (!conn)
+	{
+		UE_LOG(LogROS, Warning, TEXT("Topic needs a ROSBridgeConnection"));
+		return;
+	}
 	if (!conn->connected) // FIXME: there should be a better way
 		conn->Init();
-	Init(conn->GetCore(), Topic, MessageType, QueueSize);
+	_State.Blueprint = true;
+	_State.BlueprintMessageType = MessageType;
+	Init(conn->GetCore(), Topic, SupportedMessageTypes[MessageType], QueueSize);
 }
 
 void ATopic::Init(UROSIntegrationCore *Ric, FString Topic, FString MessageType, int32 QueueSize)
@@ -327,9 +346,91 @@ bool ATopic::Subscribe()
 		EMessageType MessageType = _State.BlueprintMessageType;
 		std::function<void(TSharedPtr<FROSBaseMsg>)> Callback = [this, MessageType](TSharedPtr<FROSBaseMsg> msg) -> void
 		{
-			UROSBPMsg* rosMsg = NewObject<UROSBPMsg>();
-			rosMsg->msg = msg;
-			OnROSMessage(rosMsg);
+			switch (MessageType)
+			{
+			case EMessageType::String:
+			{
+				auto ConcreteStringMessage = StaticCastSharedPtr<ROSMessages::std_msgs::String>(msg);
+				if (ConcreteStringMessage.IsValid())
+				{
+					const FString Data = ConcreteStringMessage->_Data;
+					TWeakPtr<ATopic, ESPMode::ThreadSafe> SelfPtr(_SelfPtr);
+					AsyncTask(ENamedThreads::GameThread, [this, Data, SelfPtr]()
+						{
+							if (!SelfPtr.IsValid()) return;
+							OnStringMessage(Data);
+						});
+				}
+				break;
+			}
+			case EMessageType::Float32:
+			{
+				auto ConcreteFloatMessage = StaticCastSharedPtr<ROSMessages::std_msgs::Float32>(msg);
+				if (ConcreteFloatMessage.IsValid())
+				{
+					const float Data = ConcreteFloatMessage->_Data;
+					TWeakPtr<ATopic, ESPMode::ThreadSafe> SelfPtr(_SelfPtr);
+					AsyncTask(ENamedThreads::GameThread, [this, Data, SelfPtr]()
+						{
+							if (!SelfPtr.IsValid()) return;
+							OnFloat32Message(Data);
+						});
+				}
+				break;
+			}
+			case EMessageType::Bool:
+			{
+				auto ConcreteBoolMessage = StaticCastSharedPtr<ROSMessages::std_msgs::Bool>(msg);
+				if (ConcreteBoolMessage.IsValid())
+				{
+					const bool Data = ConcreteBoolMessage->_Data;
+					TWeakPtr<ATopic, ESPMode::ThreadSafe> SelfPtr(_SelfPtr);
+					AsyncTask(ENamedThreads::GameThread, [this, Data, SelfPtr]()
+						{
+							if (!SelfPtr.IsValid()) return;
+							OnBoolMessage(Data);
+						});
+				}
+				break;
+			}
+			case EMessageType::Int32:
+			{
+				auto ConcreteInt32Message = StaticCastSharedPtr<ROSMessages::std_msgs::Int32>(msg);
+				if (ConcreteInt32Message.IsValid())
+				{
+					const int32 Data = ConcreteInt32Message->_Data;
+					TWeakPtr<ATopic, ESPMode::ThreadSafe> SelfPtr(_SelfPtr);
+					AsyncTask(ENamedThreads::GameThread, [this, Data, SelfPtr]()
+						{
+							if (!SelfPtr.IsValid()) return;
+							OnInt32Message(Data);
+						});
+				}
+				break;
+			}
+			case EMessageType::UInt8:
+			{
+				auto ConcreteUInt8Message = StaticCastSharedPtr<ROSMessages::std_msgs::UInt8>(msg);
+				if (ConcreteUInt8Message.IsValid())
+				{
+					const uint8 Data = ConcreteUInt8Message->_Data;
+					TWeakPtr<ATopic, ESPMode::ThreadSafe> SelfPtr(_SelfPtr);
+					AsyncTask(ENamedThreads::GameThread, [this, Data, SelfPtr]()
+						{
+							if (!SelfPtr.IsValid()) return;
+							OnUInt8Message(Data);
+						});
+				}
+				break;
+			}
+			default:
+			{
+				UROSBPMsg* rosMsg = NewObject<UROSBPMsg>();
+				rosMsg->msg = msg;
+				OnROSMessage(rosMsg);
+				break;
+			}
+			}
 		};
 
 		success = Subscribe(Callback);
@@ -338,6 +439,57 @@ bool ATopic::Subscribe()
 	return success;
 }
 
+bool ATopic::PublishBoolMessage(bool Message)
+{
+	check(_Implementation->_MessageType == TEXT("std_msgs/Bool"));
+
+	if (!_State.Advertised)
+	{
+		if (!Advertise())
+		{
+			return false;
+		}
+	}
+
+	TSharedPtr<ROSMessages::std_msgs::Bool> msg = MakeShareable(new ROSMessages::std_msgs::Bool);
+	msg->_Data = Message;
+	return _Implementation->Publish(msg);
+}
+
+bool ATopic::PublishFloat32Message(float Message)
+{
+	check(_Implementation->_MessageType == TEXT("std_msgs/Float32"));
+
+	if (!_State.Advertised)
+	{
+		if (!Advertise())
+		{
+			return false;
+		}
+	}
+
+	TSharedPtr<ROSMessages::std_msgs::Float32> msg = MakeShareable(new ROSMessages::std_msgs::Float32);
+	msg->_Data = Message;
+	return _Implementation->Publish(msg);
+}
+
+
+bool ATopic::PublishInt32Message(int32 Message)
+{
+	check(_Implementation->_MessageType == TEXT("std_msgs/Int32"));
+
+	if (!_State.Advertised)
+	{
+		if (!Advertise())
+		{
+			return false;
+		}
+	}
+
+	TSharedPtr<ROSMessages::std_msgs::Int32> msg = MakeShareable(new ROSMessages::std_msgs::Int32);
+	msg->_Data = Message;
+	return _Implementation->Publish(msg);
+}
 
 bool ATopic::PublishStringMessage(const FString& Message)
 {
@@ -356,9 +508,9 @@ bool ATopic::PublishStringMessage(const FString& Message)
 	return _Implementation->Publish(msg);
 }
 
-bool ATopic::PublishROSMessage(UROSBPMsg* message)
+bool ATopic::PublishUInt8Message(uint8 Message)
 {
-	auto addr0 = &message;
+	check(_Implementation->_MessageType == TEXT("std_msgs/UInt8"));
 
 	if (!_State.Advertised)
 	{
@@ -368,7 +520,22 @@ bool ATopic::PublishROSMessage(UROSBPMsg* message)
 		}
 	}
 
-	if (message)
+	TSharedPtr<ROSMessages::std_msgs::UInt8> msg = MakeShareable(new ROSMessages::std_msgs::UInt8);
+	msg->_Data = Message;
+	return _Implementation->Publish(msg);
+}
+
+bool ATopic::PublishROSMessage(UROSBPMsg* message)
+{
+	if (!_State.Advertised)
+	{
+		if (!Advertise())
+		{
+			return false;
+		}
+	}
+
+	if (message && message->msg)
 		return _Implementation->Publish(message->msg);
 	return false;
 }
