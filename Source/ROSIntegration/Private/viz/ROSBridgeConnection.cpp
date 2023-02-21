@@ -1,7 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "viz/ROSBridgeConnection.h"
+#include "ROSIntegrationGameInstance.h"
+
 
 AROSBridgeConnection::AROSBridgeConnection()
 {
@@ -15,14 +16,27 @@ void AROSBridgeConnection::BeginPlay()
 	Super::BeginPlay();
 }
 
+
 void AROSBridgeConnection::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	UE_LOG(LogROS, Warning, TEXT("AROSBridgeConnection::EndPlay0"));
 	Super::EndPlay(EndPlayReason);
+	UE_LOG(LogROS, Warning, TEXT("AROSBridgeConnection::EndPlay1"));
+
+	for (TObjectIterator<ATopic> It; It; ++It)
+	{
+		ATopic* Topic = *It;
+		Topic->Unadvertise(); // to make sure all topics are unadvertised on ROS side
+		Topic->Unsubscribe(); // to prevent messages arriving during shutdown from triggering subscription callbacks
+		Topic->MarkAsDisconnected();
+	}
+
 	if (ROSIntegrationCore)
 	{
 		ROSIntegrationCore->ConditionalBeginDestroy();
 		ROSIntegrationCore = nullptr;
 	}
+	
 }
 
 void AROSBridgeConnection::Init()

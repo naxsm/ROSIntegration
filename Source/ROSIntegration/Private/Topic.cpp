@@ -218,10 +218,15 @@ void ATopic::BeginPlay()
 
 void ATopic::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	UE_LOG(LogROS, Warning, TEXT("ATopic::EndPlay0, topic=%s"), *_topicName);
 	Super::EndPlay(EndPlayReason);
+	UE_LOG(LogROS, Warning, TEXT("ATopic::EndPlay1, topic=%s"), *_topicName);
+	// EndPlay cleanup done by ROSBridgeConnection or ROSIntegrationGameInstance
+	/*
 	Unsubscribe();
 	Unadvertise();
 	MarkAsDisconnected();
+	*/
 }
 
 bool ATopic::Subscribe(std::function<void(TSharedPtr<FROSBaseMsg>)> func)
