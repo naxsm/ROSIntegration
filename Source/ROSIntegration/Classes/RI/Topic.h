@@ -16,6 +16,7 @@
 * @ingroup ROS Message Types
 * Which Message type to work with.
 */
+/*
 UENUM(BlueprintType, Category = "ROS")
 enum class EMessageType : uint8
 {
@@ -32,6 +33,7 @@ enum class EMessageType : uint8
 	Bool,
 	UInt8,
 };
+*/
 
 UCLASS(Blueprintable, BlueprintType, meta = (BlueprintSpawnableComponent))
 class ROSINTEGRATION_API ATopic: public AActor
@@ -56,7 +58,7 @@ public:
 	void BeginDestroy() override;
 
 	UFUNCTION(BlueprintCallable, Category = "ROS|Topic")
-	void BaseInit(AROSBridgeConnection* conn, FString Topic, EMessageType MessageType, int32 QueueSize = 10);
+	void BaseInit(AROSBridgeConnection* conn, FString Topic, FString MessageType, int32 QueueSize = 10);
 
 	void Init(UROSIntegrationCore* Ric, FString Topic, FString MessageType, int32 QueueSize = 10);
 
@@ -104,7 +106,7 @@ public:
 	
 	UPROPERTY(EditAnywhere, Category = "ROS")
 	//FString _messageType = "std_msgs/String";
-	EMessageType _messageType = EMessageType::String;
+	FString _messageType = "std_msgs/String";
 	
 	UPROPERTY(EditAnywhere, Category = "ROS")
 	int32 _queueSize = 1;
@@ -116,12 +118,12 @@ private:
 		bool Advertised;
 		bool Subscribed;
 		bool Blueprint;
-		EMessageType BlueprintMessageType;
+		FString BlueprintMessageType;
 	} _State;
 
 
 	UFUNCTION(BlueprintCallable, Category = "ROS|Topic")
-	void Init(const FString& TopicName, EMessageType MessageType, int32 QueueSize = 1);
+	void Init(const FString& TopicName, FString MessageType, int32 QueueSize = 1);
 
 	/**
 	 * Subscribe to the given topic
@@ -150,8 +152,8 @@ private:
 	// Helper to keep track of self-destruction for async functions
 	TSharedPtr<ATopic, ESPMode::ThreadSafe> _SelfPtr;
 
-	//UPROPERTY()
-	//UROSBPMsg* rosMsg;
+	UPROPERTY()
+	UROSBPMsg* rosMsg;
 
 	// PIMPL
 	class Impl;

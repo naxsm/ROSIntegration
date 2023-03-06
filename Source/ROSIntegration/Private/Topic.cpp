@@ -6,7 +6,7 @@
 #include "Conversion/Messages/std_msgs/StdMsgsStringConverter.h"
 
 static TMap<FString, UBaseMessageConverter*> TypeConverterMap;
-static TMap<EMessageType, FString> SupportedMessageTypes;
+//static TMap<EMessageType, FString> SupportedMessageTypes;
 
 
 // PIMPL
@@ -172,6 +172,7 @@ ATopic::ATopic(const FObjectInitializer& ObjectInitializer)
 	_State.Subscribed = false;
 	_State.Blueprint = false;
 
+	/*
 	if (SupportedMessageTypes.Num() == 0)
 	{
 		SupportedMessageTypes.Add(EMessageType::String, TEXT("std_msgs/String"));
@@ -180,6 +181,7 @@ ATopic::ATopic(const FObjectInitializer& ObjectInitializer)
 		SupportedMessageTypes.Add(EMessageType::Int32, TEXT("std_msgs/Int32"));
 		SupportedMessageTypes.Add(EMessageType::UInt8, TEXT("std_msgs/UInt8"));
 	}
+	*/
 }
 
 void ATopic::PostInitProperties()
@@ -212,6 +214,7 @@ void ATopic::BeginDestroy() {
 void ATopic::BeginPlay()
 {
 	//rosMsg = NewObject<UROSBPMsg>(this, UROSBPMsg::StaticClass());
+	rosMsg = NewObject<UROSBPMsg>();
 	BaseInit(_bridgeConnection, _topicName, _messageType, _queueSize);
 	Super::BeginPlay();
 }
@@ -258,7 +261,7 @@ bool ATopic::Publish(TSharedPtr<FROSBaseMsg> msg)
 	return _State.Connected && _Implementation->Publish(msg);
 }
 
-void ATopic::BaseInit(AROSBridgeConnection* conn, FString Topic, EMessageType MessageType, int32 QueueSize)
+void ATopic::BaseInit(AROSBridgeConnection* conn, FString Topic, FString MessageType, int32 QueueSize)
 {
 	if (!conn)
 	{
@@ -269,7 +272,7 @@ void ATopic::BaseInit(AROSBridgeConnection* conn, FString Topic, EMessageType Me
 		conn->Init();
 	_State.Blueprint = true;
 	_State.BlueprintMessageType = MessageType;
-	Init(conn->GetCore(), Topic, SupportedMessageTypes[MessageType], QueueSize);
+	Init(conn->GetCore(), Topic, MessageType, QueueSize);
 }
 
 void ATopic::Init(UROSIntegrationCore *Ric, FString Topic, FString MessageType, int32 QueueSize)
@@ -321,7 +324,7 @@ FString ATopic::GetDetailedInfoInternal() const
 	return _Implementation->_Topic;
 }
 
-void ATopic::Init(const FString& TopicName, EMessageType MessageType, int32 QueueSize)
+void ATopic::Init(const FString& TopicName, FString MessageType, int32 QueueSize)
 {
 	_State.Blueprint = true;
 	_State.BlueprintMessageType = MessageType;
@@ -331,7 +334,7 @@ void ATopic::Init(const FString& TopicName, EMessageType MessageType, int32 Queu
 	{
 		if (ROSInstance->bConnectToROS && _State.Connected)
 		{
-			Init(ROSInstance->ROSIntegrationCore, TopicName, SupportedMessageTypes[MessageType], QueueSize);
+			Init(ROSInstance->ROSIntegrationCore, TopicName, MessageType, QueueSize);
 		}
 	}
 	else
@@ -348,9 +351,9 @@ bool ATopic::Subscribe()
 
 	if (_State.Connected)
 	{
-		EMessageType MessageType = _State.BlueprintMessageType;
+		FString MessageType = _State.BlueprintMessageType;
 		std::function<void(TSharedPtr<FROSBaseMsg>)> Callback = [this, MessageType](TSharedPtr<FROSBaseMsg> msg) -> void
-		{
+		{/*
 			switch (MessageType)
 			{
 			case EMessageType::String:
@@ -430,12 +433,19 @@ bool ATopic::Subscribe()
 			}
 			default:
 			{
-				UROSBPMsg* rosMsg = NewObject<UROSBPMsg>();
-				rosMsg->msg = msg;
-				OnROSMessage(rosMsg);
 				break;
 			}
 			}
+			*/
+			rosMsg->msg = msg;
+			rosMsg->id = 'o';
+			UE_LOG(LogROS, Warning, TEXT("OnROSMessage rosMsg=%p, msg=%p, id=%c, name=%s"), rosMsg, msg.Get(), rosMsg->id, *rosMsg->GetName());
+			TWeakPtr<ATopic, ESPMode::ThreadSafe> SelfPtr(_SelfPtr);
+			AsyncTask(ENamedThreads::GameThread, [&]()
+				{
+					if (!SelfPtr.IsValid()) return;
+					OnROSMessage(rosMsg);
+				});
 		};
 
 		success = Subscribe(Callback);
@@ -532,6 +542,7 @@ bool ATopic::PublishUInt8Message(uint8 Message)
 
 bool ATopic::PublishROSMessage(UROSBPMsg* message)
 {
+	//UE_LOG(LogROS, Warning, TEXT("PublishROSMessage rosMsg=%p, msg=%p, id=%c name=%s"), message, message->msg.Get(), message->id, *message->GetName());
 	if (!_State.Advertised)
 	{
 		if (!Advertise())

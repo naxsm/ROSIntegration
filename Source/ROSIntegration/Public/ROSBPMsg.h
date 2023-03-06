@@ -2,6 +2,7 @@
 
 #include <CoreMinimal.h>
 
+#include "ROSIntegrationCore.h"
 #include "ROSBaseMsg.h"
 #include "std_msgs/Bool.h"
 #include "std_msgs/Float32.h"
@@ -20,15 +21,20 @@ class ROSINTEGRATION_API UROSBPMsg : public UObject
 public:
 	
 	UROSBPMsg()
-		:msg(nullptr)
+		: UROSBPMsg(nullptr, 'n')
 	{}
 	
-	UROSBPMsg(TSharedPtr<FROSBaseMsg> m)
-		:msg(m)
-	{}
+	UROSBPMsg(TSharedPtr<FROSBaseMsg> m, char _id = 'i')
+		: msg(m)
+		, id(_id)
+	{
+		UE_LOG(LogROS, Warning, TEXT("UROSBPMsg this=%p, msg=%p, id=%c, name=%s"), this, msg.Get(), id, *GetName());
+	}
 
 	~UROSBPMsg()
-	{}
+	{
+		UE_LOG(LogROS, Warning, TEXT("~UROSBPMsg this=%p, msg=%p, id=%c, name=%s"), this, msg.Get(), id, *GetName());
+	}
 
 	UFUNCTION(BlueprintCallable, Category = ROS)
 	void castToBool(bool& value, bool& success);
@@ -45,7 +51,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = ROS)
 	void castToUInt8(uint8& value, bool& success);
 
-	uint8 zzz[1024 * 256]; // TODO FIXME: remove this, it's only there to show a mem leak
+	//uint8 zzz[1024 * 256]; // TODO FIXME: remove this, it's only there to show a mem leak
 	TSharedPtr<FROSBaseMsg> msg;
+	char id;
 };
 
